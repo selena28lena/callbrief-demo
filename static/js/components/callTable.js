@@ -3,6 +3,8 @@
 import { avatar, el, emptyState, fmtDateShort, fmtTime, icon, RISK, severityBadge, tag } from "../ui.js";
 
 export function callReason(call) {
+  if (call.status === "failed") return "Не удалось обработать — откройте звонок, чтобы повторить";
+  if (call.status === "transcribing" || call.status === "analyzing") return "Идёт обработка…";
   if (call.severity_reason) return call.severity_reason;
   if (!call.status || call.status === "new") return "Ещё не проанализирован";
   return "Замечаний нет";
@@ -63,6 +65,7 @@ export function callTable(rows, { compact = false, showManager = true, onOpen } 
     const first = el("td");
     const firstRow = el("div", "row");
     firstRow.style.gap = "12px";
+    firstRow.style.flexWrap = "nowrap";   // значок слева от названия, а не отдельной строкой над ним
     const tile = el("span", "ico-tile sm " + (call.audio_path || call.source === "demo" ? "sky" : "violet"));
     tile.append(icon(call.audio_path || call.source === "demo" ? "wave" : "text", "i-sm"));
     const titleBox = el("div");

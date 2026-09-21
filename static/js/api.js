@@ -70,8 +70,6 @@ export const api = {
   clients: () => request("/api/clients"),
   client: (id) => request(`/api/clients/${id}`),
   actions: (params) => request(`/api/actions${qs(params)}`),
-  updateAction: (id, payload) => request(`/api/actions/${id}`, { method: "PUT", body: { payload } }),
-  skipAction: (id) => request(`/api/actions/${id}/skip`, { method: "POST" }),
 
   crmStatus: () => request("/api/crm/status"),
   crmDeals: (q) => request(`/api/crm/deals${qs({ q })}`),

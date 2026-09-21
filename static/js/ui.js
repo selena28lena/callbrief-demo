@@ -34,7 +34,7 @@ export function tag(text, iconName, cls) {
 
 /** Аватар сотрудника: фотография, если она есть, иначе инициал на цветном фоне. */
 export function avatar(user, size = "") {
-  const name = typeof user === "string" ? user : user?.name;
+  const name = typeof user === "string" ? user : (user?.name || user?.user_name);
   const file = typeof user === "object" ? (user?.avatar || user?.user_avatar || user?.owner_avatar) : null;
   const cls = "avatar" + (size ? " avatar-" + size : "");
   if (file) {
@@ -45,7 +45,7 @@ export function avatar(user, size = "") {
     return img;
   }
   const node = el("span", cls, (name || "?").trim().charAt(0).toUpperCase());
-  node.style.background = (typeof user === "object" && user?.color) || "#6366f1";
+  node.style.background = (typeof user === "object" && (user?.color || user?.user_color)) || "#6366f1";
   node.style.display = "grid";
   node.style.placeItems = "center";
   node.style.fontWeight = "600";

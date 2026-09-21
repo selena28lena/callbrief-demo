@@ -2,7 +2,7 @@
 
 import { api } from "../api.js";
 import { mount, setBack } from "../app.js";
-import { el, errorBox, icoTile, icon, loading, tag } from "../ui.js";
+import { el, errorBox, icoTile, icon, loading } from "../ui.js";
 
 const KINDS = {
   objections: { tone: "amber", icon: "alert", label: "Что мешает продажам" },

@@ -59,7 +59,7 @@ def find_or_create_client(name: str, phone: str | None = None, company: str | No
 
 # ---------- Звонки ----------
 
-CALL_COLUMNS = """k.*, u.name AS user_name, u.color AS user_color,
+CALL_COLUMNS = """k.*, u.name AS user_name, u.color AS user_color, u.avatar AS user_avatar,
                   c.name AS client_name, c.company AS client_company"""
 
 CALL_JOINS = "LEFT JOIN users u ON u.id = k.user_id LEFT JOIN clients c ON c.id = k.client_id"
@@ -229,13 +229,21 @@ def best_moments(skill: str | None = None, limit: int = 50) -> list[dict]:
     if skill:
         where.append("b.skill = ?")
         params.append(skill)
-    return db.query(
-        "SELECT b.*, u.name AS user_name, u.color AS user_color, k.title AS call_title "
+    rows = db.query(
+        "SELECT b.*, u.name AS user_name, u.color AS user_color, u.avatar AS user_avatar, k.title AS call_title "
         "FROM best_moments b LEFT JOIN users u ON u.id = b.user_id "
         f"JOIN calls k ON k.id = b.call_id WHERE {' AND '.join(where)} "
-        "ORDER BY b.pinned DESC, b.score DESC LIMIT ?",
-        (*params, limit),
+        "ORDER BY b.pinned DESC, b.score DESC",
+        params,
     )
+    # Одна и та же удачная фраза из похожих звонков — показываем один раз
+    seen, unique = set(), []
+    for row in rows:
+        key = (row["skill"], (row["quote"] or "").strip().lower())
+        if key not in seen:
+            seen.add(key)
+            unique.append(row)
+    return unique[:limit]
 
 
 # ---------- Действия ----------

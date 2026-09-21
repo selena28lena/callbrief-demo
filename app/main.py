@@ -3,13 +3,13 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, File, Request, UploadFile
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
-from . import gemini, store
+from . import db, store
 from .api import analytics as analytics_api
 from .api import calls as calls_api
 from .api import crm as crm_api
@@ -17,22 +17,20 @@ from .api import embed as embed_api
 from .api import meta as meta_api
 from .db import init_db
 from .gemini import AppError
-from .schemas import AnalyzeRequest, AnalyzeResponse, TranscribeResponse
-from .services import pipeline
-from .session import current_user
-from .verify import verify_result
+from .services import demo_data
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
-
-AUDIO_TYPES = calls_api.AUDIO_TYPES
-MAX_AUDIO_BYTES = calls_api.MAX_AUDIO_BYTES
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     load_dotenv(BASE_DIR / ".env", override=True)   # ключи и адрес CRM доступны всему приложению
     init_db()
+    # При первом запуске база пустая — наполняем демо-отделом, чтобы все разделы было что показать.
+    # Если демо-данные удалили в настройках вручную, больше не подкладываем их.
+    if not db.scalar("SELECT COUNT(*) FROM calls", default=0) and store.setting("demo_cleared") != "1":
+        demo_data.seed(reset=False)
     yield
 
 
@@ -112,27 +110,3 @@ def index():
 def workspace():
     """Рабочее приложение: сайдбар, звонки, разборы."""
     return page("app.html")
-
-
-# --- Разовый разбор без сохранения: используется старым интерфейсом ---
-
-@app.post("/api/analyze", response_model=AnalyzeResponse)
-def analyze(req: AnalyzeRequest):
-    text = pipeline.check_text(req.text)
-    result, model = gemini.analyze(text)
-    return verify_result(result, text, model)
-
-
-@app.post("/api/transcribe", response_model=TranscribeResponse)
-def transcribe(file: UploadFile = File(...)):
-    filename = file.filename or "audio"
-    mime_type = AUDIO_TYPES.get(Path(filename).suffix.lower())
-    if not mime_type:
-        raise AppError("bad_format", "Поддерживаются только файлы mp3, wav, m4a и ogg.", 400)
-    data = file.file.read(MAX_AUDIO_BYTES + 1)
-    if not data:
-        raise AppError("empty_file", "Файл пустой.", 400)
-    if len(data) > MAX_AUDIO_BYTES:
-        raise AppError("too_large", "Файл больше 200 МБ. Сожмите запись или разделите её на части.", 413)
-    text, model = pipeline.transcribe_audio(data, mime_type, filename)
-    return TranscribeResponse(text=text, model=model)

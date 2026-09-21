@@ -82,7 +82,7 @@ def overview(days: int = 30, user_id: int | None = None) -> dict:
     total = sum(counts.values())
 
     prev_total = db.scalar(
-        f"SELECT COUNT(*) FROM calls WHERE started_at >= datetime('now', ?) AND started_at < datetime('now', ?)"
+        "SELECT COUNT(*) FROM calls WHERE started_at >= datetime('now', ?) AND started_at < datetime('now', ?)"
         + (" AND user_id = ?" if user_id else ""),
         [f"-{days * 2} days", f"-{days} days"] + ([user_id] if user_id else []),
         0,
@@ -146,7 +146,7 @@ def overview(days: int = 30, user_id: int | None = None) -> dict:
         "total": total,
         "counts": {s: counts.get(s, 0) for s in SEVERITIES},
         "trend": trend,
-        "no_next_step": db.scalar(f"SELECT COUNT(*) FROM calls WHERE {clause} AND has_next_step = 0 AND status = 'analyzed'", params, 0),
+        "no_next_step": db.scalar(f"SELECT COUNT(*) FROM calls WHERE {clause} AND has_next_step = 0 AND status IN ('analyzed', 'saved')", params, 0),
         "avg_score": db.scalar(f"SELECT ROUND(AVG(score), 1) FROM calls WHERE {clause} AND score IS NOT NULL", params, 0),
         "rejections": reason_rows,
         "objections": [{"label": OBJECTION_LABELS.get(k, k), "value": v} for k, v in objections.most_common(6)],
@@ -215,7 +215,7 @@ def coach_summary(user_id: int, days: int = 30) -> dict:
         "strengths": [dict(s) for s in strengths],
         "progress": {"current": avg_score(days, 0), "previous": avg_score(days * 2, days)},
         "calls_analyzed": db.scalar(
-            "SELECT COUNT(*) FROM calls WHERE user_id = ? AND status = 'analyzed' AND started_at >= datetime('now', ?)",
+            "SELECT COUNT(*) FROM calls WHERE user_id = ? AND status IN ('analyzed', 'saved') AND started_at >= datetime('now', ?)",
             (user_id, f"-{int(days)} days"), 0),
     }
 

@@ -30,18 +30,72 @@ function openedDealId() {
   return new URLSearchParams(location.search).get("deal") || "";
 }
 
+function savedToast(result) {
+  toast(result.deal_id
+    ? `Сохранено в ${result.provider}, сделка №${result.deal_id}: ${result.applied} ${plural(result.applied, ["действие", "действия", "действий"])}`
+    : `Отправлено в ${result.provider}: ${result.applied}`);
+}
+
 async function applyToCrm(callId, button, reload) {
   button.disabled = true;
   try {
-    const result = await api.crmApplyCall(callId, openedDealId());
-    toast(result.deal_id
-      ? `Сохранено в ${result.provider}, сделка №${result.deal_id}: ${result.applied} ${plural(result.applied, ["действие", "действия", "действий"])}`
-      : `Отправлено в ${result.provider}: ${result.applied}`);
+    savedToast(await api.crmApplyCall(callId, openedDealId()));
     reload();
   } catch (err) {
-    toast(err.message);
     button.disabled = false;
+    // Звонок загружен не из карточки сделки — даём выбрать, куда его сохранить
+    if (err.code === "no_deal") pickDeal(callId, reload);
+    else toast(err.message);
   }
+}
+
+function pickDeal(callId, reload) {
+  const box = el("div", "col");
+  const search = el("input");
+  search.type = "search";
+  search.placeholder = "Поиск по названию сделки";
+  const list = el("div", "col");
+  box.append(el("p", "muted", "Звонок загружен не из карточки сделки. Выберите, куда сохранить комментарий и задачу."),
+    search, list);
+
+  const load = async (query) => {
+    list.replaceChildren(loading("Ищу сделки…"));
+    try {
+      const data = await api.crmDeals(query);
+      list.replaceChildren();
+      if (!data.items.length) list.append(el("p", "muted", "Сделки не найдены."));
+      data.items.slice(0, 12).forEach((deal) => {
+        const btn = el("button", "user-card");
+        const info = el("span");
+        info.style.flex = "1";
+        info.append(el("b", null, deal.title || `Сделка №${deal.id}`),
+          el("span", null, `№${deal.id}${deal.stage ? " · " + deal.stage : ""}`));
+        btn.append(info);
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          try {
+            await api.crmLink({ call_id: callId, deal_id: deal.id, deal_title: deal.title });
+            savedToast(await api.crmApplyCall(callId, deal.id));
+            close();
+            reload();
+          } catch (err) {
+            toast(err.message);
+            btn.disabled = false;
+          }
+        });
+        list.append(btn);
+      });
+    } catch (err) {
+      list.replaceChildren(el("div", "alert alert-error", err.message));
+    }
+  };
+  let timer = null;
+  search.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => load(search.value.trim()), 350);
+  });
+  const close = modal("В какую сделку сохранить?", box);
+  load("");
 }
 
 function verifyTag(verified) {
@@ -481,7 +535,7 @@ export async function render(id) {
   if (call.duration) meta.append(metaItem("clock", fmtTime(call.duration)));
   meta.append(metaItem("user", call.user_name || "—"));
   if (call.crm_deal_id) meta.append(metaItem("actions", `сделка №${call.crm_deal_id}`));
-  if (call.severity && call.status === "analyzed") meta.append(severityBadge(call.severity));
+  if (call.severity && ["analyzed", "saved"].includes(call.status)) meta.append(severityBadge(call.severity));
   names.append(meta);
   titleRow.append(names);
   titleBox.append(titleRow);

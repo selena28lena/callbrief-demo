@@ -31,11 +31,11 @@ function managerRow(manager) {
   info.style.minWidth = "0";
   info.append(el("div", "strong", manager.name));
   info.append(el("div", "t-sub", `${manager.calls} ${plural(manager.calls, ["звонок", "звонка", "звонков"])} · ${manager.critical} ${plural(manager.critical, ["критический", "критических", "критических"])}`));
+  // Зона роста — под именем: в узкой колонке справа она сжимала имя до слова в строке
+  const problem = tag(manager.problem, "alert", manager.critical > 3 ? "bad" : "warn");
+  problem.style.marginTop = "8px";
+  info.append(problem);
   row.append(info);
-  const problem = el("div");
-  problem.style.textAlign = "right";
-  problem.append(tag(manager.problem, "alert", manager.critical > 3 ? "bad" : "warn"));
-  row.append(problem);
   return row;
 }
 

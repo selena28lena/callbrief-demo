@@ -2,7 +2,7 @@
 
 import { api } from "../api.js";
 import { isHead, mount, setBack, state } from "../app.js";
-import { avatar, el, emptyState, errorBox, fmtTime, icoTile, icon, loading, plural, tag, toast } from "../ui.js";
+import { avatar, el, emptyState, errorBox, fmtTime, icoTile, icon, loading, plural, tag } from "../ui.js";
 
 function patternCard(pattern) {
   const card = el("div", "coach-card");
@@ -51,10 +51,11 @@ function patternCard(pattern) {
     evidence.append(link);
   });
   foot.append(evidence);
-  const train = el("button", "btn btn-primary btn-sm");
-  train.append(icon("coach", "i-sm"), el("span", null, "Потренироваться"));
-  train.addEventListener("click", () => toast("Тренировки включим на следующем шаге"));
-  foot.append(train);
+  // Лучший способ научиться — услышать, как этот навык звучит у коллег
+  const learn = el("a", "btn btn-primary btn-sm");
+  learn.href = "#/best";
+  learn.append(icon("star", "i-sm"), el("span", null, "Как это делают коллеги"));
+  foot.append(learn);
   card.append(foot);
   return card;
 }

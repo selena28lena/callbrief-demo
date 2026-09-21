@@ -22,7 +22,7 @@ function clientCard(client) {
   const stats = el("div", "row");
   stats.style.marginTop = "16px";
   stats.append(tag(`${client.calls_count} ${plural(client.calls_count, ["звонок", "звонка", "звонков"])}`, "phone"));
-  if (client.critical) stats.append(tag(`${client.critical} критических`, "alert", "bad"));
+  if (client.critical) stats.append(tag(`${client.critical} ${plural(client.critical, ["критический", "критических", "критических"])}`, "alert", "bad"));
   stats.append(client.has_next_step ? tag("шаг назначен", "check", "ok") : tag("нет следующего шага", "alert", "warn"));
   card.append(stats);
 

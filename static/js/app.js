@@ -9,7 +9,6 @@ export const state = {
   users: [],
   health: null,
   crm: null,
-  pending: 0,
 };
 
 export const isHead = () => state.user?.role === "head";
@@ -39,7 +38,6 @@ export function renderNav() {
     const link = el("a");
     link.href = "#" + item.path;
     link.append(icon(item.icon), el("span", null, item.label));
-    if (item.badge && state.pending) link.append(el("span", "badge", String(state.pending)));
     const active = item.path === "/" ? path === "/" : path.startsWith(item.path);
     if (active) link.classList.add("active");
     nav.append(link);
@@ -117,14 +115,6 @@ async function loadSession() {
   setUserUi();
 }
 
-async function loadBadges() {
-  try {
-    const data = await api.actions({ status: "draft" });
-    state.pending = data.items.length;
-    renderNav();
-  } catch { /* не критично */ }
-}
-
 function applyEmbedMode() {
   if (new URLSearchParams(location.search).get("embed") !== "1") return;
   document.body.classList.add("embed-mode");
@@ -144,11 +134,9 @@ async function boot() {
   state.crm = crm.status === "fulfilled" ? crm.value : null;
   setStatus();
 
-  const load = (path) => () => import(path);
   router.route("/", async () => (await import("./views/home.js")).render());
   router.route("/calls", async ({ query }) => (await import("./views/calls.js")).render(query));
   router.route("/calls/:id", async ({ id }) => (await import("./views/call.js")).render(Number(id)));
-  router.route("/actions", async () => (await import("./views/actions.js")).render());
   router.route("/coach", async ({ query }) => (await import("./views/coach.js")).render("coach", query));
   router.route("/best", async () => (await import("./views/best.js")).render());
   router.route("/clients", async () => (await import("./views/clients.js")).render());
@@ -157,7 +145,6 @@ async function boot() {
   router.route("/settings", async () => (await import("./views/settings.js")).render());
   router.setNotFound(() => router.go("/", true));
   router.start();
-  loadBadges();
 }
 
 boot();

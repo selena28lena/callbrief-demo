@@ -62,9 +62,12 @@ def _deal_id_for(call: dict, deal_id: str | None = None) -> str:
     if call.get("crm_deal_id"):
         return str(call["crm_deal_id"])
     client = store.client(call["client_id"]) if call["client_id"] else None
-    if not client or not client.get("crm_id"):
-        raise AppError("no_deal", "Звонок не связан со сделкой в CRM. Выберите сделку и повторите.", 400)
-    return client["crm_id"]
+    if client and client.get("crm_id"):
+        return client["crm_id"]
+    # Во встроенной демо-CRM сделка — это карточка клиента, её можно определить без выбора
+    if client and adapter().name == "demo":
+        return str(client["id"])
+    raise AppError("no_deal", "Звонок не связан со сделкой в CRM. Выберите сделку и повторите.", 400)
 
 
 def apply_one(action: dict, call: dict, deal_id: str, crm) -> dict:

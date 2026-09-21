@@ -4,15 +4,17 @@ import { api } from "../api.js";
 import { mount, setBack } from "../app.js";
 import { bar, donut, legend } from "../components/charts.js";
 import { callTable } from "../components/callTable.js";
-import { avatar, el, errorBox, icoTile, icon, loading, plural, tag } from "../ui.js";
+import { avatar, el, errorBox, icoTile, loading, plural, tag } from "../ui.js";
 
 function managerCard(manager) {
   const card = el("a", "card card-hover");
   card.href = `#/coach?user=${manager.id}`;
   const head = el("div", "row");
+  head.style.flexWrap = "nowrap";   // длинное имя переносится внутри колонки, а не уезжает под аватар
   head.append(avatar(manager, "lg"));
   const info = el("div");
   info.style.minWidth = "0";
+  info.style.flex = "1";
   info.append(el("div", "strong big", manager.name));
   info.append(el("div", "t-sub", `${manager.calls} ${plural(manager.calls, ["звонок", "звонка", "звонков"])} за месяц`));
   head.append(info);
@@ -30,7 +32,7 @@ function managerCard(manager) {
 
   const tags = el("div", "row");
   tags.style.marginTop = "16px";
-  if (manager.critical) tags.append(tag(`${manager.critical} критических`, "alert", "bad"));
+  if (manager.critical) tags.append(tag(`${manager.critical} ${plural(manager.critical, ["критический", "критических", "критических"])}`, "alert", "bad"));
   if (manager.attention) tags.append(tag(`${manager.attention} с замечаниями`, "alert", "warn"));
   if (!manager.critical && !manager.attention) tags.append(tag("без проблем", "check-c", "ok"));
   card.append(tags);

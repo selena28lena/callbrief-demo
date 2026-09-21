@@ -96,10 +96,6 @@ class ScoreResult(BaseModel):
 
 # --- Ответы API -------------------------------------------------------------
 
-class AnalyzeRequest(BaseModel):
-    text: str = ""
-
-
 class VerifiedAgreement(Agreement):
     verified: bool
 
@@ -133,11 +129,6 @@ class AnalyzeResponse(BaseModel):
     recommendations: list[VerifiedRecommendation]
     open_questions: list[str]
     verification: Verification
-    model: str
-
-
-class TranscribeResponse(BaseModel):
-    text: str
     model: str
 
 

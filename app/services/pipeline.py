@@ -146,8 +146,3 @@ def fix_speakers(transcript: str) -> tuple[str, int]:
         return transcript, 0
     fixes = [f.model_dump() for f in result.lines]
     return speakers.render(speakers.apply(rows, fixes)), speakers.changed_count(rows, fixes)
-
-
-def transcribe_audio(data: bytes, mime_type: str, filename: str, on_chunk=None) -> tuple[str, str]:
-    """Расшифровка аудио — обёртка над Gemini, чтобы роутеры не знали о деталях."""
-    return gemini.transcribe(data, mime_type, filename, on_chunk=on_chunk)

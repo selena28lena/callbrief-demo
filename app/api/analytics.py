@@ -43,7 +43,11 @@ def get_coach(days: int = 30, user_id: int | None = None, user: dict = Depends(c
 @router.get("/best")
 def get_best(skill: str | None = None, user: dict = Depends(current_user)):
     moments = store.best_moments(skill=skill, limit=60)
-    skills = db.query("SELECT skill, COUNT(*) AS n FROM best_moments GROUP BY skill ORDER BY n DESC")
+    # Счётчики навыков — по уникальным моментам, как они показаны на экране
+    counts: dict[str, int] = {}
+    for m in store.best_moments(limit=1000):
+        counts[m["skill"]] = counts.get(m["skill"], 0) + 1
+    skills = [{"skill": k, "n": v} for k, v in sorted(counts.items(), key=lambda kv: -kv[1])]
     return {"items": moments, "skills": skills}
 
 
