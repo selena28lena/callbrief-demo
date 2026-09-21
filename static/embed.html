@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CallBrief — разбор звонка</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="//api.bitrix24.com/api/v1/"></script>
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<style>
+  html, body { height: 100%; }
+  body { padding: 0; background: var(--bg); }
+  .frame-wrap { position: fixed; inset: 0; display: flex; flex-direction: column; }
+  .frame-wrap iframe { flex: 1; width: 100%; border: 0; }
+  .panel { max-width: 760px; margin: 0 auto; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+  .head { display: flex; align-items: center; gap: 14px; }
+  .brand-mark { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+    background: linear-gradient(135deg, #6366f1, #38bdf8); box-shadow: 0 8px 20px rgba(99,102,241,.4); }
+  .brand-mark svg { width: 20px; height: 20px; stroke: #fff; stroke-width: 2.4; fill: none; stroke-linecap: round; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 20px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-logo" viewBox="0 0 24 24"><path d="M4 10v4M8 6.5v11M12 3v18M16 7.5v9M20 10.5v3"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5"/><path d="M12 12v7M9 15l3-3 3 3"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-arrow-r" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</defs></svg>
+
+<div id="root"></div>
+
+<script type="module">
+import { el, icon, toast } from "/static/js/ui.js";
+
+const DEAL_ID = "__DEAL_ID__";
+const root = document.getElementById("root");
+
+function brand() {
+  const head = el("div", "head");
+  const mark = el("span", "brand-mark");
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", "#i-logo");
+  svg.append(use);
+  mark.append(svg);
+  head.append(mark, el("div", "strong big", "CallBrief"));
+  return head;
+}
+
+function uploaderView(dealId, onDone) {
+  const panel = el("div", "panel");
+  panel.append(brand());
+  const card = el("div", "card");
+  card.append(el("div", "sec-title", "Разобрать звонок по этой сделке"));
+
+  const drop = el("label", "drop");
+  const input = el("input");
+  input.type = "file";
+  input.accept = ".mp3,.wav,.m4a,.ogg,audio/*";
+  drop.append(input, icon("cloud", "i-xl"), el("strong", null, "Перетащите запись разговора"),
+    el("span", null, "или нажмите, чтобы выбрать файл"));
+
+  const area = el("textarea");
+  area.placeholder = "…или вставьте текст разговора";
+  area.style.cssText = "min-height:110px;margin-top:14px";
+  const row = el("div", "row");
+  row.style.marginTop = "14px";
+  const btn = el("button", "btn btn-primary");
+  btn.append(icon("bolt", "i-sm"), el("span", null, "Разобрать текст"));
+  row.append(btn);
+
+  const send = async (fn) => {
+    card.replaceChildren(el("div", "row"));
+    card.firstChild.append(el("span", "spinner"), el("span", null, "Загружаю и запускаю разбор…"));
+    try {
+      const data = await fn();
+      onDone(data.call_id);
+    } catch (err) {
+      toast(err.message || "Ошибка");
+      card.replaceChildren();
+      card.append(el("div", "alert alert-error", err.message || "Не удалось загрузить"));
+      setTimeout(() => onDone(null), 1500);
+    }
+  };
+
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (!file) return;
+    send(async () => {
+      const form = new FormData();
+      form.append("deal_id", dealId);
+      form.append("file", file);
+      const res = await fetch("/api/embed/upload", { method: "POST", body: form });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Ошибка загрузки");
+      return res.json();
+    });
+  });
+  btn.addEventListener("click", () => {
+    if (area.value.trim().length < 30) return toast("Вставьте текст разговора");
+    send(async () => {
+      const form = new FormData();
+      form.append("deal_id", dealId);
+      form.append("text", area.value.trim());
+      const res = await fetch("/api/embed/text", { method: "POST", body: form });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Ошибка");
+      return res.json();
+    });
+  });
+  ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", (e) => {
+    if (!e.dataTransfer.files[0]) return;
+    input.files = e.dataTransfer.files;
+    input.dispatchEvent(new Event("change"));
+  });
+
+  card.append(drop, area, row);
+  panel.append(card);
+  return panel;
+}
+
+function frameView(callId, onBack) {
+  const wrap = el("div", "frame-wrap");
+  const bar = el("div", "row");
+  bar.style.cssText = "padding:10px 16px;border-bottom:1px solid var(--line);flex:none";
+  bar.append(brand());
+  const spacer = el("div");
+  spacer.style.flex = "1";
+  bar.append(spacer);
+  const back = el("button", "btn btn-ghost btn-sm");
+  back.append(el("span", null, "Загрузить другой звонок"));
+  back.addEventListener("click", onBack);
+  bar.append(back);
+  const iframe = el("iframe");
+  // deal передаём явно: всё уйдёт именно в ту карточку, из которой открыта панель
+  iframe.src = `/app?embed=1&deal=${encodeURIComponent(DEAL_ID)}#/calls/${callId}`;
+  wrap.append(bar, iframe);
+  return wrap;
+}
+
+async function boot() {
+  if (!DEAL_ID) {
+    root.append(uploaderView("", () => {}));
+    root.firstChild.append(el("div", "alert alert-info", "Откройте панель из карточки сделки в CRM."));
+    return;
+  }
+  let data;
+  try {
+    data = await fetch(`/api/embed/deal/${DEAL_ID}`).then((r) => r.json());
+  } catch {
+    data = null;
+  }
+  render(data?.last_call?.id ?? null);
+}
+
+function render(callId) {
+  root.replaceChildren();
+  if (callId) {
+    root.append(frameView(callId, () => render(null)));
+  } else {
+    root.append(uploaderView(DEAL_ID, (id) => { if (id) render(id); }));
+  }
+}
+
+if (window.BX24) BX24.init(() => {});
+boot();
+</script>
+</body>
+</html>

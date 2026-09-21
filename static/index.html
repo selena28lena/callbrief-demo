@@ -1,0 +1,1825 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CallBrief — ИИ-анализ разговоров с клиентами</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05060a;
+    --line: rgba(255, 255, 255, .07);
+    --line-2: rgba(255, 255, 255, .12);
+    --text: #e8ebf2;
+    --text-2: #c2c8d5;
+    --muted: #8a91a1;
+    --dim: #5b6272;
+    --accent: #7cb8ff;
+    --glow: rgba(96, 165, 255, .45);
+    --ok: #3dd6a8;
+    --ok-bg: rgba(61, 214, 168, .1);
+    --ok-line: rgba(61, 214, 168, .28);
+    --miss: #f2b35b;
+    --miss-bg: rgba(242, 179, 91, .1);
+    --miss-line: rgba(242, 179, 91, .28);
+    --high: #ff6f6f;
+    --med: #f2b35b;
+    --low: #86b8a2;
+    --manager: #8f9bff;
+    --client: #f2f4f8;
+    --radius: 18px;
+    --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .logo-mark { width: 30px; height: 30px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
+
+  /* ---------- Кнопки ---------- */
+  .btn-pill { display: inline-flex; align-items: center; gap: 12px; background: linear-gradient(180deg, #f5f7fb, #d8dee9); color: #0b0d12;
+    border: 0; border-radius: 999px; padding: 15px 26px; font-weight: 500; font-size: 15px;
+    box-shadow: 0 8px 30px rgba(160, 190, 255, .15), inset 0 1px 0 #fff; transition: transform .15s, box-shadow .15s; }
+  .btn-pill:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 40px rgba(160, 190, 255, .28), inset 0 1px 0 #fff; }
+  .btn-pill.sm { padding: 10px 18px; font-size: 14px; gap: 10px; }
+  .btn-outline { border: 1px solid var(--line-2); background: rgba(255, 255, 255, .03); padding: 10px 20px; border-radius: 14px; font-size: 15px; transition: background .2s; }
+  .btn-outline:hover { background: rgba(255, 255, 255, .07); }
+  .btn-ghost { display: inline-flex; align-items: center; gap: 10px; padding: 11px 18px; border-radius: 12px; border: 1px solid var(--line-2);
+    background: rgba(255, 255, 255, .03); font-size: 14px; white-space: nowrap; transition: background .2s; }
+  .btn-ghost:hover:not(:disabled) { background: rgba(255, 255, 255, .07); }
+  .btn-ghost.icon { padding: 11px 13px; }
+  .btn-ghost.danger { color: #ff9d9d; }
+  .icon-btn { border: 1px solid var(--line); background: rgba(255, 255, 255, .04); border-radius: 10px; width: 36px; height: 36px; display: grid; place-items: center; flex: none; }
+  .icon-btn:hover { background: rgba(255, 255, 255, .08); }
+  .link-btn { background: none; border: 0; color: var(--accent); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; padding: 0; }
+  .link-btn:hover { text-decoration: underline; }
+  .link-btn .i { width: 14px; height: 14px; }
+
+  /* ================= ЛЕНДИНГ ================= */
+  /* Один экран без прокрутки: шапка, первый экран и полоса преимуществ */
+  .landing { position: relative; height: 100vh; height: 100dvh; min-height: 600px; display: flex; flex-direction: column; overflow: hidden;
+    background: radial-gradient(1100px 620px at 72% 32%, rgba(60, 110, 200, .11), transparent 60%), var(--bg); }
+  .wrap { width: 100%; max-width: 1360px; margin: 0 auto; padding-inline: clamp(16px, 5vw, 72px); }
+  .l-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; height: clamp(64px, 9vh, 88px); flex: none; }
+  .l-nav { display: flex; gap: 36px; }
+  .l-nav button { background: none; border: 0; color: var(--text-2); font-size: 15px; padding: 6px 0; transition: color .2s; }
+  .l-nav button:hover, .l-nav button[aria-expanded="true"] { color: #fff; }
+
+  .hero { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: clamp(20px, 3vw, 48px); align-items: center; padding-block: 1vh 2vh; }
+  .eyebrow { font-size: 12px; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); }
+  .hero h1 { font-weight: 300; font-size: clamp(34px, min(4.3vw, 7.2vh), 66px); line-height: 1.07; letter-spacing: -.025em; margin: clamp(12px, 2.4vh, 22px) 0 clamp(14px, 3vh, 28px);
+    background: linear-gradient(180deg, #fff, #b7c1d5); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { font-size: clamp(15px, 2.1vh, 18px); line-height: 1.6; color: var(--text-2); max-width: 520px; margin: 0 0 clamp(20px, 4.5vh, 40px); }
+  .hero-cta { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
+  .cta-note { color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+  /* Визуал: сцена фиксированного размера, масштабируется под свободное место */
+  .hero-visual { position: relative; height: 100%; min-height: 0; }
+  .hv-stage { position: absolute; left: 50%; top: 50%; width: 680px; height: 540px; transform: translate(-50%, -50%) scale(var(--s, 1)); transform-origin: center; }
+  .hv-badge { position: absolute; right: 0; top: 0; font-size: 10.5px; letter-spacing: .22em; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .hv-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .hv-wave { position: absolute; left: 0; top: 36px; width: 100%; height: 116px; pointer-events: none; }
+  .hv-beam { position: absolute; top: 14px; height: 160px; width: 2px; left: 145px; border-radius: 2px; pointer-events: none;
+    background: linear-gradient(180deg, rgba(160, 200, 255, 0), rgba(170, 205, 255, .6) 18%, #fff 40%, #e2eeff 62%, rgba(140, 190, 255, .7));
+    box-shadow: 0 0 12px 1px rgba(120, 175, 255, .75), 0 0 42px 6px rgba(90, 150, 255, .22); }
+  .hv-hit { position: absolute; width: 150px; height: 28px; pointer-events: none;
+    background: radial-gradient(50% 50% at 50% 50%, rgba(160, 200, 255, .5), transparent 70%); filter: blur(3px); }
+  .hv-curve { position: absolute; left: -75%; top: 250px; width: 150%; height: 300px; pointer-events: none; }
+  .hv-cards { position: absolute; left: 0; right: 0; top: 176px; display: grid; grid-template-columns: 0.92fr 1.18fr; gap: 18px; perspective: 1400px; }
+  .glass-card { background: linear-gradient(180deg, rgba(255, 255, 255, .065), rgba(255, 255, 255, .015)); border: 1px solid rgba(255, 255, 255, .11);
+    border-radius: 18px; box-shadow: 0 30px 80px rgba(0, 0, 0, .65), inset 0 1px 0 rgba(255, 255, 255, .07);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  .hv-upload { padding: 24px 22px 22px; display: flex; flex-direction: column; align-items: center; gap: 20px; transform: rotateY(5deg); transform-origin: right center; }
+  .hv-upload .drop { min-height: 230px; }
+  .hv-result { padding: 20px 20px 10px; transform: rotateY(-9deg) translateY(-14px); transform-origin: left center; }
+  .hv-title { font-size: 15px; margin: 4px 6px 10px; }
+  .hv-row { display: flex; align-items: center; gap: 14px; padding: 13px 6px; border-top: 1px solid var(--line); }
+  .hv-ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); flex: none; }
+  .hv-row strong { display: block; font-weight: 400; font-size: 14px; }
+  .hv-row small { color: var(--muted); font-size: 12px; }
+  .hv-row .chev { margin-left: auto; color: var(--muted); width: 16px; height: 16px; }
+  .hv-floor { position: absolute; left: 0; width: 46%; bottom: -24px; height: 110px;
+    background: radial-gradient(50% 55% at 50% 30%, rgba(120, 170, 255, .28), transparent 70%); filter: blur(12px); pointer-events: none; }
+
+  .strip { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); padding-block: clamp(14px, 2.8vh, 32px) clamp(10px, 2vh, 22px); }
+  .strip-item { padding: 0 30px; border-left: 1px solid var(--line); }
+  .strip-item:first-child { border-left: 0; padding-left: 16px; }
+  .strip-item .i { width: 24px; height: 24px; color: var(--text-2); stroke-width: 1.4; }
+  .strip h3 { font-weight: 400; font-size: clamp(15px, 2vh, 17px); margin: clamp(8px, 1.6vh, 16px) 0 6px; }
+  .strip p { color: var(--muted); margin: 0; font-size: clamp(12.5px, 1.7vh, 14px); line-height: 1.5; }
+  .l-note { flex: none; text-align: center; color: var(--dim); font-size: 11.5px; padding-bottom: clamp(8px, 1.6vh, 16px); }
+
+  /* Всплывающие окна «Возможности» и «Как это работает» */
+  .modal-back { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 24px 16px;
+    background: rgba(3, 4, 8, .62); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: fade .2s ease; }
+  .modal { position: relative; width: min(1000px, 100%); max-height: calc(100vh - 48px); overflow: auto; padding: clamp(22px, 3vw, 36px);
+    background: linear-gradient(180deg, rgba(20, 24, 34, .97), rgba(10, 12, 18, .97)); animation: pop .22s ease; }
+  .modal-close { position: absolute; top: 16px; right: 16px; }
+  .modal-note { color: var(--muted); font-size: 13px; margin: 22px 0 0; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+  .section-head { max-width: 680px; margin-bottom: 26px; padding-right: 44px; }
+  .section-head h2 { font-weight: 300; font-size: clamp(26px, 3vw, 38px); letter-spacing: -.02em; line-height: 1.15; margin: 12px 0 10px; }
+  .section-head p { color: var(--muted); margin: 0; font-size: 15px; }
+  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .feature { padding: 26px; border-radius: var(--radius); border: 1px solid var(--line); background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .01)); }
+  .feature .hv-ico { margin-bottom: 20px; }
+  .feature h3 { font-weight: 500; font-size: 17px; margin: 0 0 8px; }
+  .feature p { color: var(--muted); margin: 0; font-size: 14px; }
+  .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: step; }
+  .step { position: relative; padding: 28px 26px; border-radius: var(--radius); border: 1px solid var(--line); }
+  .step-num { font-size: 13px; letter-spacing: .2em; color: var(--accent); }
+  .step h3 { font-weight: 500; font-size: 18px; margin: 14px 0 8px; }
+  .step p { color: var(--muted); margin: 0; font-size: 14px; }
+
+  /* ================= ПРИЛОЖЕНИЕ ================= */
+  .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh;
+    background: radial-gradient(900px 500px at 60% -10%, rgba(70, 120, 210, .08), transparent 60%), var(--bg); }
+  .side { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 26px 18px 22px; border-right: 1px solid var(--line); }
+  .side .brand { padding: 0 10px 34px; }
+  .side-nav { display: flex; flex-direction: column; gap: 6px; }
+  .side-nav a { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; color: var(--text-2); border: 1px solid transparent; transition: background .2s, color .2s; }
+  .side-nav a:hover { background: rgba(255, 255, 255, .03); color: #fff; }
+  .side-nav a.active { background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .03)); border-color: var(--line); color: #fff; }
+  .nav-count { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .side-card { margin-top: auto; display: flex; gap: 12px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, .02); }
+  .side-card strong { display: block; font-weight: 500; font-size: 13px; margin-bottom: 4px; }
+  .side-card span { font-size: 12px; color: var(--muted); line-height: 1.45; display: block; }
+  .main { min-width: 0; padding: 0 clamp(16px, 2.4vw, 32px) 48px; }
+  .topbar { display: flex; align-items: center; gap: 16px; height: 72px; border-bottom: 1px solid var(--line); margin-bottom: 30px; }
+  .back { display: inline-flex; align-items: center; gap: 10px; color: var(--text-2); font-size: 14px; }
+  .back:hover { color: #fff; }
+  .spacer { flex: 1; }
+  .status-pill { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 255, 255, .02); white-space: nowrap; }
+  .status-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
+  .status-pill.ok .dot { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+  .status-pill.warn .dot { background: var(--miss); box-shadow: 0 0 10px var(--miss); }
+  .status-pill.err .dot { background: var(--high); box-shadow: 0 0 10px var(--high); }
+
+  .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+  .page-head h1 { font-size: 30px; font-weight: 500; letter-spacing: -.02em; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0; }
+  .meta { display: flex; flex-wrap: wrap; gap: 10px 16px; color: var(--text-2); font-size: 14px; align-items: center; }
+  .meta > span { display: inline-flex; align-items: center; gap: 8px; }
+  .meta .i { width: 16px; height: 16px; color: var(--muted); }
+  .meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--dim); }
+  .meta .ok-text { color: var(--ok); }
+  .meta .ok-text .i { color: var(--ok); }
+  .meta .miss-text { color: var(--miss); }
+  .meta .miss-text .i { color: var(--miss); }
+  .head-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+  .card { background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .012)); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+  .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .card-head h2, .card-title { margin: 0; font-size: 16px; font-weight: 500; }
+  .hint { color: var(--muted); font-size: 12.5px; }
+
+  .alert { border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; font-size: 14px; border: 1px solid; }
+  .alert-error { background: rgba(255, 111, 111, .08); border-color: rgba(255, 111, 111, .3); color: #ffbcbc; }
+  .alert-info { background: rgba(124, 184, 255, .07); border-color: rgba(124, 184, 255, .25); color: #d2e5ff; }
+  .alert ol { margin: 8px 0 0; padding-left: 20px; color: var(--text-2); }
+  .alert code { background: rgba(255, 255, 255, .08); padding: 1px 6px; border-radius: 5px; }
+  .alert a { color: var(--accent); text-decoration: underline; }
+
+  /* Новый анализ */
+  .new-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 24px; align-items: stretch; }
+  .new-grid .card { display: flex; flex-direction: column; }
+  .drop { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; width: 100%;
+    border: 1px dashed rgba(255, 255, 255, .2); border-radius: 14px; padding: 28px 18px; cursor: pointer; color: var(--muted); transition: border-color .2s, background .2s; min-height: 250px; }
+  .drop:hover, .drop.over { border-color: rgba(124, 184, 255, .65); background: rgba(124, 184, 255, .05); }
+  .drop input { display: none; }
+  .drop strong { color: var(--text); font-weight: 500; font-size: 15px; margin-top: 14px; }
+  .drop span { font-size: 13px; }
+  .drop small { font-size: 11.5px; color: var(--dim); margin-top: 22px; letter-spacing: .02em; }
+  .drop .big-i { width: 40px; height: 40px; stroke-width: 1.2; color: var(--text-2); }
+  .drop.has-file { border-style: solid; border-color: rgba(124, 184, 255, .4); }
+  .drop.has-file span { color: var(--accent); }
+  .file-row { display: flex; align-items: center; gap: 14px; padding: 16px; border: 1px solid rgba(124, 184, 255, .3); border-radius: 14px; background: rgba(124, 184, 255, .05); }
+  .file-row .i { color: var(--accent); width: 22px; height: 22px; }
+  .file-meta { min-width: 0; flex: 1; }
+  .file-meta strong { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-meta span { font-size: 12.5px; color: var(--muted); }
+  .card-note { color: var(--muted); font-size: 13px; margin: 16px 0 0; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+  .chip { border: 1px solid var(--line-2); background: rgba(255, 255, 255, .03); border-radius: 999px; padding: 6px 14px; font-size: 13px; color: var(--text-2); transition: border-color .2s, color .2s; }
+  .chip:hover:not(:disabled) { border-color: rgba(124, 184, 255, .55); color: #fff; }
+  textarea { width: 100%; flex: 1; min-height: 340px; height: 46vh; resize: vertical; background: rgba(0, 0, 0, .28); border: 1px solid var(--line);
+    border-radius: 14px; color: var(--text); padding: 16px; font: 14px/1.65 var(--font); }
+  textarea:focus { outline: none; border-color: rgba(124, 184, 255, .5); box-shadow: 0 0 0 3px rgba(124, 184, 255, .1); }
+  textarea::placeholder { color: var(--dim); }
+  .row { display: flex; align-items: center; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+  .progress { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
+  .spinner { width: 38px; height: 38px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .1); border-top-color: var(--accent);
+    animation: spin .9s linear infinite; box-shadow: 0 0 22px rgba(111, 179, 255, .25); flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress strong { display: block; font-weight: 500; }
+  .progress span { color: var(--muted); font-size: 13px; }
+  .progress .time-big { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 14px; }
+
+  /* Результат */
+  .result-grid { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr); gap: 24px; align-items: start; }
+  .col-main, .col-side { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+  .player .card-title { margin-bottom: 14px; }
+  .wave { position: relative; height: 76px; cursor: pointer; }
+  .wave-bars { display: flex; align-items: center; gap: clamp(1px, .25vw, 2px); height: 100%; overflow: hidden; }
+  .wave-bars span { flex: 1; min-width: 0; border-radius: 2px; background: rgba(200, 215, 245, .3); transition: background .15s; }
+  .wave-bars span.played { background: linear-gradient(180deg, #c7dfff, #78b6ff); }
+  .wave-bars.placeholder span { opacity: .5; }
+  .wave-head { position: absolute; top: -8px; bottom: -8px; width: 2px; left: 0; background: #fff; box-shadow: 0 0 16px 3px var(--glow); pointer-events: none; border-radius: 2px; }
+  .controls { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+  .play { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .07); display: grid; place-items: center; flex: none; transition: background .2s; }
+  .play:hover { background: rgba(255, 255, 255, .13); }
+  .time { font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 14px; white-space: nowrap; }
+  .range { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 4px; outline: none; cursor: pointer;
+    background: linear-gradient(90deg, var(--accent) var(--p, 0%), rgba(255, 255, 255, .1) var(--p, 0%)); }
+  .range::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px var(--glow); }
+  .range::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 10px var(--glow); }
+  #seek { flex: 1; min-width: 80px; }
+  #volume { width: 84px; }
+  .pill-btn { border: 1px solid var(--line); background: rgba(255, 255, 255, .04); border-radius: 10px; padding: 7px 12px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .pill-btn:hover { background: rgba(255, 255, 255, .08); }
+  .vol { display: flex; align-items: center; gap: 8px; }
+  .no-audio { display: flex; gap: 14px; align-items: center; color: var(--muted); font-size: 14px; }
+
+  .tabs-card { padding: 0; display: flex; flex-direction: column; }
+  .tabs { display: flex; gap: 4px; padding: 0 18px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .tab { background: none; border: 0; padding: 19px 14px 17px; color: var(--muted); font-size: 15px; position: relative; white-space: nowrap; transition: color .2s; }
+  .tab:hover { color: var(--text-2); }
+  .tab.active { color: #fff; }
+  .tab.active::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; border-radius: 2px;
+    background: linear-gradient(90deg, #9cc7ff, #fff); box-shadow: 0 0 12px var(--glow); }
+  .tab-count { font-size: 12px; color: var(--muted); margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: rgba(255, 255, 255, .06); }
+  .tab-body { padding: 16px 20px; max-height: 640px; min-height: 280px; overflow: auto; }
+  .tabs-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 20px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+
+  .tline { display: grid; grid-template-columns: 58px 12px minmax(0, 1fr); gap: 0 12px; padding: 12px 10px; border-radius: 12px; transition: background .35s; }
+  .tline .t { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; background: none; border: 0; padding: 1px 0 0; text-align: left; align-self: start; }
+  .tline button.t:hover { color: var(--accent); }
+  .tline .dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 7px; background: var(--dim); }
+  .tline.client .dot { background: var(--client); }
+  .tline.manager .dot { background: var(--manager); }
+  .tline .who { font-size: 12.5px; color: var(--muted); margin-bottom: 2px; }
+  .tline .txt { color: var(--text); line-height: 1.6; }
+  .tline.flash { background: rgba(111, 179, 255, .14); }
+  .tline.playing { background: rgba(255, 255, 255, .045); }
+  .tline.playing .t { color: #fff; }
+
+  .sec-title { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 10px 0 12px; }
+  .sec-title:not(:first-child) { margin-top: 28px; }
+  .summary-text { font-size: 15.5px; line-height: 1.65; color: var(--text); margin: 0; }
+  .items { display: flex; flex-direction: column; gap: 12px; }
+  .item { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; background: rgba(255, 255, 255, .015); }
+  .item.risk-high { border-left: 3px solid var(--high); }
+  .item.risk-medium { border-left: 3px solid var(--med); }
+  .item.risk-low { border-left: 3px solid var(--low); }
+  .item-title { font-size: 15px; font-weight: 500; line-height: 1.45; }
+  .item-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, .05); color: var(--text-2); border: 1px solid var(--line); white-space: nowrap; }
+  .tag .i { width: 13px; height: 13px; }
+  .tag.ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-line); }
+  .tag.miss { background: var(--miss-bg); color: var(--miss); border-color: var(--miss-line); }
+  .tag.muted { color: var(--muted); }
+  .tag.ai { color: #c4b8ff; border-color: rgba(160, 140, 255, .3); background: rgba(160, 140, 255, .08); }
+  .tag.lvl-high { color: var(--high); border-color: rgba(255, 111, 111, .3); background: rgba(255, 111, 111, .08); }
+  .tag.lvl-medium { color: var(--med); border-color: var(--miss-line); background: var(--miss-bg); }
+  .tag.lvl-low { color: var(--low); border-color: rgba(134, 184, 162, .3); background: rgba(134, 184, 162, .08); }
+  .quote { margin-top: 12px; padding: 4px 0 4px 14px; border-left: 2px solid rgba(255, 255, 255, .15); font-style: italic; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+  .item .link-btn { margin-top: 10px; }
+  .bullets { margin: 0; padding-left: 18px; }
+  .bullets li { margin: 8px 0; color: var(--text-2); }
+  .bullets li::marker { color: var(--accent); }
+  .empty-state { padding: 38px 10px; text-align: center; color: var(--muted); }
+
+  .side-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .side-head h3 { margin: 0; font-size: 16px; font-weight: 500; }
+  .side-head small { color: var(--muted); font-size: 12px; }
+  .ring { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    background: radial-gradient(circle, rgba(61, 214, 168, .2), rgba(61, 214, 168, .04)); border: 1px solid rgba(61, 214, 168, .32); color: var(--ok); box-shadow: 0 0 20px rgba(61, 214, 168, .15); }
+  .head-ico { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; flex: none; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); }
+  .head-ico.flag { color: #ff5f7a; background: rgba(255, 95, 122, .08); border-color: rgba(255, 95, 122, .25); }
+  .head-ico.cal { color: var(--ok); background: var(--ok-bg); border-color: var(--ok-line); }
+  .kv { display: flex; gap: 14px; padding: 11px 0; align-items: flex-start; }
+  .kv-ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex: none; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); color: var(--text-2); }
+  .kv-ico .i { width: 16px; height: 16px; }
+  .kv-label { font-size: 13.5px; color: var(--text); }
+  .kv-value { font-size: 13.5px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .meter { display: inline-flex; gap: 6px; }
+  .meter i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, .1); }
+  .meter i.on { background: var(--c, var(--accent)); box-shadow: 0 0 8px var(--c, var(--accent)); }
+  .next-action { margin: 0 0 6px; color: var(--text); line-height: 1.5; }
+  .next-owner { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  .next-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pill-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 10px; font-size: 12.5px; background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-line); }
+  .pill-status .i { width: 14px; height: 14px; }
+  .pill-status.muted { background: rgba(255, 255, 255, .04); color: var(--muted); border-color: var(--line); }
+  .pill-status.warn { background: var(--miss-bg); color: var(--miss); border-color: var(--miss-line); }
+  .deadline { color: var(--text-2); font-size: 13.5px; }
+
+  .menu-wrap { position: relative; }
+  .menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 250px; background: #10141d; border: 1px solid var(--line-2); border-radius: 14px; padding: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); z-index: 20; }
+  .menu.up { top: auto; bottom: calc(100% + 8px); min-width: 120px; }
+  .menu button { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; color: var(--text-2); text-align: left; }
+  .menu button:hover { background: rgba(255, 255, 255, .06); color: #fff; }
+  .menu button.sel { color: var(--accent); }
+  .menu .danger { color: #ff9d9d; }
+
+  /* Архив и настройки */
+  .archive-tools { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .search { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; background: rgba(0, 0, 0, .22); color: var(--muted); }
+  .search input { flex: 1; min-width: 0; background: none; border: 0; color: var(--text); padding: 12px 0; font: inherit; outline: none; }
+  .arc-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; gap: 16px; align-items: center; padding: 16px 12px; border-top: 1px solid var(--line); border-radius: 12px; transition: background .2s; }
+  .arc-row:hover { background: rgba(255, 255, 255, .03); }
+  .arc-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .arc-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .arc-summary { font-size: 13px; color: var(--text-2); margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .arc-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: start; }
+  .settings-grid .kv { border-top: 1px solid var(--line); padding: 14px 0; }
+  pre.code { background: rgba(0, 0, 0, .35); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font: 13px/1.6 ui-monospace, Consolas, monospace; color: var(--text-2); overflow: auto; margin: 10px 0 0; }
+  .settings-grid p { color: var(--muted); font-size: 14px; }
+
+  .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; background: #141925; border: 1px solid var(--line-2);
+    color: var(--text); padding: 12px 18px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0, 0, 0, .5); transition: opacity .25s, transform .25s; z-index: 50; font-size: 14px; max-width: calc(100vw - 32px); }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- Адаптив ---------- */
+  @media (max-width: 1180px) {
+    .result-grid { grid-template-columns: minmax(0, 1fr); }
+    .col-side { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  }
+  @media (max-width: 1100px) {
+    .landing { height: auto; min-height: 100vh; overflow: visible; }
+    .l-header { grid-template-columns: auto 1fr; }
+    .l-nav { justify-content: flex-end; gap: 22px; }
+    .hero { grid-template-columns: 1fr; padding-block: 24px; }
+    .hero-visual { height: min(84vw, 560px); }
+    .strip { grid-template-columns: repeat(2, 1fr); row-gap: 28px; }
+    .strip-item:nth-child(3) { border-left: 0; padding-left: 16px; }
+    .feature-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+    .status-pill { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .side { position: sticky; top: 0; z-index: 10; height: auto; flex-direction: row; align-items: center; gap: 12px; padding: 10px 16px;
+      border-right: 0; border-bottom: 1px solid var(--line); background: rgba(5, 6, 10, .92); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); overflow-x: auto; }
+    .side .brand { padding: 0; font-size: 18px; }
+    .side .logo-mark { width: 24px; height: 24px; }
+    .side-nav { flex-direction: row; gap: 4px; margin-left: auto; }
+    .side-nav a { padding: 8px 12px; gap: 8px; }
+    .side-card { display: none; }
+    .new-grid, .settings-grid, .steps-grid { grid-template-columns: minmax(0, 1fr); }
+    .topbar { height: 60px; margin-bottom: 22px; min-width: 0; }
+    .status-pill { max-width: 60%; }
+  }
+  @media (max-width: 640px) {
+    .hero-visual { height: min(92vw, 460px); }
+    .l-header .brand { font-size: 19px; }
+    .l-nav { gap: 14px; }
+    .l-nav button { font-size: 13.5px; }
+    .strip, .feature-grid { grid-template-columns: 1fr; }
+    .strip-item { border-left: 0 !important; padding: 0 !important; }
+    .side-nav .label { display: none; }
+    .page-head h1 { font-size: 24px; }
+    .arc-row { grid-template-columns: 36px minmax(0, 1fr) auto; }
+    .arc-tags { display: none; }
+    .controls { flex-wrap: wrap; }
+    #seek { order: 5; flex-basis: 100%; }
+    .col-side { display: flex; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Иконки -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></symbol>
+    <symbol id="i-analysis" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+    <symbol id="i-arrow-r" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-arrow-l" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5"/><path d="M12 12v7M9 15l3-3 3 3"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-check-c" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-steps" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M13 9l3 3-3 3"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17.5v.01"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-bars" viewBox="0 0 24 24"><path d="M6 20v-6M12 20V8M18 20V4"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7.5 5h3v14h-3zM13.5 5h3v14h-3z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m17 9 5 6M22 9l-5 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3 11v2M6 8v8M9 5v14M12 9v6M15 4v16M18 8v8M21 11v2"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10M4 18h7"/></symbol>
+    <symbol id="i-quote" viewBox="0 0 24 24"><path d="M7 7h4v4c0 3-1.5 5-4 6M14 7h4v4c0 3-1.5 5-4 6"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17v.01"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7z"/></symbol>
+  </defs>
+</svg>
+
+<!-- ================= ЛЕНДИНГ ================= -->
+<div id="landing" class="landing">
+  <header class="l-header wrap">
+    <a class="brand" href="#/"><svg class="logo-mark" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 3v18M16 8v8M20 11v2"/></svg>CallBrief</a>
+    <nav class="l-nav">
+      <button data-modal="features" aria-haspopup="dialog" aria-expanded="false">Возможности</button>
+      <button data-modal="how" aria-haspopup="dialog" aria-expanded="false">Как это работает</button>
+    </nav>
+  </header>
+
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <div class="eyebrow">ИИ-анализ телефонных разговоров</div>
+      <h1>Превращаем разговоры в&nbsp;конкретные решения</h1>
+      <p class="lead">Загружайте записи звонков или транскрипты — и получайте готовый разбор: расшифровку, договорённости, следующий шаг, риски и рекомендации для руководителя. Каждый вывод подтверждён цитатой из разговора.</p>
+      <div class="hero-cta">
+        <a class="btn-pill" href="/app">Начать бесплатно <svg class="i"><use href="#i-arrow-r"/></svg></a>
+        <span class="cta-note">Быстрый анализ<br>за 20–40 секунд</span>
+      </div>
+    </div>
+
+    <div class="hero-visual" id="heroVisual">
+     <div class="hv-stage" id="hvStage">
+      <div class="hv-badge"><span class="dot"></span>AI ANALYSIS</div>
+      <canvas class="hv-wave" id="heroWave" aria-hidden="true"></canvas>
+      <svg class="hv-curve" viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="curveG" x1="0" x2="1"><stop offset="0" stop-color="#7cb8ff" stop-opacity="0"/><stop offset=".55" stop-color="#9cc7ff" stop-opacity=".3"/><stop offset="1" stop-color="#fff" stop-opacity=".9"/></linearGradient></defs>
+        <path d="M0 290 C 330 285, 520 265, 590 200" fill="none" stroke="url(#curveG)" stroke-width="1.5"/>
+      </svg>
+      <div class="hv-cards" id="hvCards">
+        <div class="glass-card hv-upload" id="heroUpload">
+          <label class="drop" id="heroDrop">
+            <input type="file" id="heroFile" accept=".mp3,.wav,.m4a,.ogg,audio/*">
+            <svg class="i big-i"><use href="#i-cloud"/></svg>
+            <strong>Перетащите аудиофайл сюда</strong>
+            <span id="heroFileName">или нажмите, чтобы выбрать</span>
+            <small>MP3, WAV, M4A, OGG · до 200 МБ</small>
+          </label>
+          <button class="btn-pill sm" id="heroRecognize">Распознать <svg class="i"><use href="#i-arrow-r"/></svg></button>
+        </div>
+        <div class="glass-card hv-result">
+          <div class="hv-title">Готовый результат</div>
+          <div class="hv-row"><span class="hv-ico"><svg class="i"><use href="#i-file"/></svg></span><div><strong>Транскрипция разговора</strong><small>Дословный текст с метками времени</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="hv-row"><span class="hv-ico"><svg class="i"><use href="#i-alert"/></svg></span><div><strong>Анализ и риски</strong><small>Что важно для руководителя</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="hv-row"><span class="hv-ico"><svg class="i"><use href="#i-bulb"/></svg></span><div><strong>Рекомендации</strong><small>На что обратить внимание</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="hv-row"><span class="hv-ico"><svg class="i"><use href="#i-steps"/></svg></span><div><strong>Дальнейшие договорённости</strong><small>Кто, что и к какому сроку</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+        </div>
+      </div>
+      <div class="hv-beam" id="heroBeam" aria-hidden="true"></div>
+      <div class="hv-hit" id="heroHit" aria-hidden="true"></div>
+      <div class="hv-floor" aria-hidden="true"></div>
+     </div>
+    </div>
+  </section>
+
+  <section class="strip wrap">
+    <div class="strip-item"><svg class="i"><use href="#i-bolt"/></svg><h3>Экономит время</h3><p>Вместо часов прослушивания —<br>готовый разбор за 20–40 секунд.</p></div>
+    <div class="strip-item"><svg class="i"><use href="#i-target"/></svg><h3>Ничего не упускается</h3><p>Договорённости, сроки и риски<br>собраны в одном отчёте.</p></div>
+    <div class="strip-item"><svg class="i"><use href="#i-shield"/></svg><h3>Можно доверять</h3><p>Каждый вывод подтверждён цитатой, непроверенное помечается ❓.</p></div>
+    <div class="strip-item"><svg class="i"><use href="#i-bars"/></svg><h3>Аудио и текст</h3><p>Записи звонков, встреч<br>и готовые транскрипты.</p></div>
+  </section>
+  <div class="l-note">Используйте только обезличенные данные. Некоммерческий сервис на бесплатном тарифе Gemini.</div>
+</div>
+
+<!-- Всплывающие окна лендинга -->
+<div class="modal-back" id="mFeatures" role="dialog" aria-modal="true" aria-labelledby="mFeaturesTitle" hidden>
+  <div class="glass-card modal">
+    <button class="icon-btn modal-close" data-close aria-label="Закрыть"><svg class="i"><use href="#i-x"/></svg></button>
+    <div class="section-head">
+      <div class="eyebrow">Возможности</div>
+      <h2 id="mFeaturesTitle">Всё, что руководителю нужно знать о звонке</h2>
+      <p>CallBrief извлекает только то, что действительно прозвучало в разговоре, и показывает, откуда взят каждый вывод.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature"><span class="hv-ico"><svg class="i"><use href="#i-wave"/></svg></span><h3>Расшифровка аудио</h3><p>MP3, WAV, M4A и OGG до 200 МБ. Дословный текст с метками времени и ролями «Менеджер» и «Клиент».</p></div>
+      <div class="feature"><span class="hv-ico"><svg class="i"><use href="#i-check-c"/></svg></span><h3>Договорённости</h3><p>Только то, на что стороны явно согласились. «Подумаем» и «может быть» — не договорённость, а риск.</p></div>
+      <div class="feature"><span class="hv-ico"><svg class="i"><use href="#i-steps"/></svg></span><h3>Следующий шаг</h3><p>Кто, что и к какому сроку делает. Сроки сохраняются так, как их назвали в разговоре.</p></div>
+      <div class="feature"><span class="hv-ico"><svg class="i"><use href="#i-alert"/></svg></span><h3>Риски и открытые вопросы</h3><p>Конкуренты, сомнения в цене, отсутствие решения — с уровнем риска и списком того, чего не хватает.</p></div>
+      <div class="feature"><span class="hv-ico"><svg class="i"><use href="#i-bulb"/></svg></span><h3>Рекомендации</h3><p>Практические советы менеджеру и руководителю — каждый привязан к конкретному моменту разговора.</p></div>
+      <div class="feature"><span class="hv-ico"><svg class="i"><use href="#i-share"/></svg></span><h3>Отчёт и архив</h3><p>Скачайте отчёт, поделитесь им в пару кликов и возвращайтесь к прошлым анализам в архиве.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="mHow" role="dialog" aria-modal="true" aria-labelledby="mHowTitle" hidden>
+  <div class="glass-card modal">
+    <button class="icon-btn modal-close" data-close aria-label="Закрыть"><svg class="i"><use href="#i-x"/></svg></button>
+    <div class="section-head">
+      <div class="eyebrow">Как это работает</div>
+      <h2 id="mHowTitle">Три шага от записи до решения</h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step"><div class="step-num">01</div><h3>Загрузите запись или текст</h3><p>Перетащите аудиофайл или вставьте готовый транскрипт. Можно начать с одного из примеров.</p></div>
+      <div class="step"><div class="step-num">02</div><h3>ИИ разбирает разговор</h3><p>Gemini извлекает договорённости, шаги, риски и рекомендации — только из того, что было сказано.</p></div>
+      <div class="step"><div class="step-num">03</div><h3>Проверьте и поделитесь</h3><p>Сверьте цитаты, послушайте нужный фрагмент записи и отправьте отчёт руководителю.</p></div>
+    </div>
+    <p class="modal-note">Используйте только обезличенные данные: без имён, телефонов и адресов клиентов. Бесплатный тариф Gemini может использовать запросы для улучшения моделей Google.</p>
+    <div class="row"><a class="btn-pill sm" href="/app" data-close>Начать бесплатно <svg class="i"><use href="#i-arrow-r"/></svg></a></div>
+  </div>
+</div>
+
+<!-- ================= ПРИЛОЖЕНИЕ ================= -->
+<div id="app" class="app" hidden>
+  <aside class="side">
+    <a class="brand" href="#/"><svg class="logo-mark" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 3v18M16 8v8M20 11v2"/></svg>CallBrief</a>
+    <nav class="side-nav">
+      <a href="#/" data-nav="home"><svg class="i"><use href="#i-home"/></svg><span class="label">Главная</span></a>
+      <a href="/app" data-nav="analyses"><svg class="i"><use href="#i-analysis"/></svg><span class="label">Анализы</span></a>
+      <a href="#/archive" data-nav="archive"><svg class="i"><use href="#i-clock"/></svg><span class="label">Архив</span><span class="nav-count label" id="archiveCount"></span></a>
+      <a href="#/settings" data-nav="settings"><svg class="i"><use href="#i-gear"/></svg><span class="label">Настройки</span></a>
+    </nav>
+    <div class="side-card">
+      <svg class="i"><use href="#i-bolt"/></svg>
+      <div><strong>Быстрый анализ</strong><span>Обычно 20–40 секунд на разговор, аудио — чуть дольше</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <a class="back" id="backLink" href="/app" hidden><svg class="i"><use href="#i-arrow-l"/></svg>Назад к загрузке</a>
+      <div class="spacer"></div>
+      <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">Проверка подключения…</span></div>
+    </div>
+
+    <!-- Новый анализ -->
+    <section id="vNew">
+      <div class="page-head">
+        <div>
+          <h1>Новый анализ</h1>
+          <p class="sub">Загрузите запись разговора или вставьте готовый транскрипт. Используйте только обезличенные данные.</p>
+        </div>
+      </div>
+
+      <div id="keyAlert" class="alert alert-info" hidden>
+        <strong>Не найден ключ Gemini API.</strong> Он бесплатный:
+        <ol>
+          <li>Откройте <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> и нажмите «Create API key».</li>
+          <li>В папке проекта создайте файл <code>.env</code> со строкой <code>GEMINI_API_KEY=ваш_ключ</code>.</li>
+          <li>Обновите эту страницу.</li>
+        </ol>
+      </div>
+      <div id="newError" class="alert alert-error" hidden></div>
+      <div id="newNotice" class="alert alert-info" hidden></div>
+
+      <div class="card progress" id="progress" hidden>
+        <div class="spinner"></div>
+        <div><strong id="progressTitle"></strong><span id="progressSub"></span></div>
+        <span class="time-big" id="progressTime"></span>
+      </div>
+
+      <div class="new-grid">
+        <div class="card">
+          <div class="card-head"><h2>Аудиозапись</h2><span class="hint">MP3, WAV, M4A, OGG · до 200 МБ</span></div>
+          <label class="drop" id="appDrop">
+            <input type="file" id="appFile" accept=".mp3,.wav,.m4a,.ogg,audio/*">
+            <svg class="i big-i"><use href="#i-cloud"/></svg>
+            <strong>Перетащите аудиофайл сюда</strong>
+            <span>или нажмите, чтобы выбрать</span>
+          </label>
+          <div class="file-row" id="fileRow" hidden>
+            <svg class="i"><use href="#i-wave"/></svg>
+            <div class="file-meta"><strong id="fileName"></strong><span id="fileSize"></span></div>
+            <button class="icon-btn" id="fileClear" title="Убрать файл" aria-label="Убрать файл"><svg class="i"><use href="#i-x"/></svg></button>
+          </div>
+          <div class="row"><button class="btn-pill sm" id="recognizeBtn" disabled>Распознать <svg class="i"><use href="#i-arrow-r"/></svg></button></div>
+          <p class="card-note">Gemini дословно расшифрует запись с метками времени и ролями «Менеджер» / «Клиент». Текст появится в поле справа — проверьте его перед анализом.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>Текст разговора</h2><span class="hint" id="charCount">0 символов</span></div>
+          <div class="chips">
+            <span>Примеры:</span>
+            <button class="chip" data-example="1">Успешный</button>
+            <button class="chip" data-example="2">Размытый</button>
+            <button class="chip" data-example="3">Длинный</button>
+          </div>
+          <textarea id="transcript" placeholder="Вставьте транскрипт разговора, например:&#10;&#10;Менеджер: Добрый день! ...&#10;Клиент: Здравствуйте ..."></textarea>
+          <div class="row">
+            <button class="btn-pill sm" id="analyzeBtn">Проанализировать <svg class="i"><use href="#i-arrow-r"/></svg></button>
+            <span class="hint">Ctrl+Enter</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Результат -->
+    <section id="vResult" hidden>
+      <div class="page-head">
+        <div>
+          <h1 id="rTitle">Анализ звонка</h1>
+          <div class="meta" id="rMeta"></div>
+        </div>
+        <div class="head-actions">
+          <button class="btn-ghost" id="dlReport"><svg class="i"><use href="#i-download"/></svg>Скачать отчёт</button>
+          <button class="btn-ghost" id="shareBtn"><svg class="i"><use href="#i-share"/></svg>Поделиться</button>
+          <div class="menu-wrap">
+            <button class="btn-ghost icon" id="moreBtn" aria-haspopup="menu" aria-label="Ещё"><svg class="i"><use href="#i-dots"/></svg></button>
+            <div class="menu" id="moreMenu" role="menu" hidden>
+              <button data-act="copy"><svg class="i"><use href="#i-copy"/></svg>Скопировать отчёт (Markdown)</button>
+              <button data-act="txt"><svg class="i"><use href="#i-file"/></svg>Скачать транскрипт .txt</button>
+              <button data-act="new"><svg class="i"><use href="#i-plus"/></svg>Новый анализ</button>
+              <button data-act="delete" class="danger"><svg class="i"><use href="#i-trash"/></svg>Удалить из архива</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-grid">
+        <div class="col-main">
+          <div class="card player" id="player" hidden>
+            <div class="card-title">Аудиозапись</div>
+            <div class="wave" id="wave" title="Нажмите, чтобы перейти к месту записи">
+              <div class="wave-bars" id="waveBars"></div>
+              <div class="wave-head" id="waveHead"></div>
+            </div>
+            <div class="controls">
+              <button class="play" id="playBtn" aria-label="Воспроизвести"><svg class="i"><use href="#i-play"/></svg></button>
+              <span class="time"><span id="tCur">00:00</span> / <span id="tDur">00:00</span></span>
+              <input class="range" type="range" id="seek" min="0" max="1000" value="0" aria-label="Позиция">
+              <div class="menu-wrap">
+                <button class="pill-btn" id="speedBtn" aria-haspopup="menu">1.0x</button>
+                <div class="menu up" id="speedMenu" hidden></div>
+              </div>
+              <div class="vol">
+                <button class="icon-btn" id="muteBtn" aria-label="Выключить звук"><svg class="i"><use href="#i-volume"/></svg></button>
+                <input class="range" type="range" id="volume" min="0" max="100" value="100" aria-label="Громкость" style="--p:100%">
+              </div>
+            </div>
+            <audio id="audio" preload="metadata"></audio>
+          </div>
+          <div class="card no-audio" id="noAudio" hidden>
+            <svg class="i"><use href="#i-wave"/></svg>
+            <span>Запись не сохранилась в браузере (файл больше 100 МБ или нет места) — доступны расшифровка и анализ.</span>
+          </div>
+
+          <div class="card tabs-card">
+            <div class="tabs" role="tablist">
+              <button class="tab" role="tab" data-tab="transcript">Транскрипция</button>
+              <button class="tab" role="tab" data-tab="analysis">Анализ <span class="tab-count"></span></button>
+              <button class="tab" role="tab" data-tab="recs">Рекомендации <span class="tab-count"></span></button>
+              <button class="tab" role="tab" data-tab="agreements">Договорённости <span class="tab-count"></span></button>
+            </div>
+            <div class="tab-body" id="tabBody"></div>
+            <div class="tabs-foot">
+              <span>Полная расшифровка доступна в формате .txt, отчёт — в формате .md</span>
+              <button class="link-btn" id="dlTxt"><svg class="i"><use href="#i-download"/></svg>Скачать .txt</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-side">
+          <div class="card">
+            <div class="side-head">
+              <span class="ring"><svg class="i"><use href="#i-target"/></svg></span>
+              <div><h3>Сводка по звонку</h3><small>Сгенерировано AI · цитаты сверены с текстом</small></div>
+            </div>
+            <div id="keyInfo"></div>
+          </div>
+          <div class="card">
+            <div class="side-head">
+              <span class="head-ico flag"><svg class="i"><use href="#i-flag"/></svg></span>
+              <h3>Что важно для руководителя</h3>
+            </div>
+            <ul class="bullets" id="rImportant"></ul>
+          </div>
+          <div class="card">
+            <div class="side-head">
+              <span class="head-ico cal"><svg class="i"><use href="#i-calendar"/></svg></span>
+              <h3>Дальнейшие договорённости</h3>
+            </div>
+            <div id="rNext"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Архив -->
+    <section id="vArchive" hidden>
+      <div class="page-head">
+        <div><h1>Архив</h1><p class="sub">Все анализы сохраняются только в этом браузере — на сервер ничего не записывается.</p></div>
+        <div class="head-actions"><a class="btn-ghost" href="/app"><svg class="i"><use href="#i-plus"/></svg>Новый анализ</a></div>
+      </div>
+      <div class="card">
+        <div class="archive-tools">
+          <label class="search"><svg class="i"><use href="#i-search"/></svg><input id="archiveSearch" type="search" placeholder="Поиск по названию, резюме или тексту разговора"></label>
+          <button class="btn-ghost danger" id="clearArchive"><svg class="i"><use href="#i-trash"/></svg>Очистить архив</button>
+        </div>
+        <div id="archiveList"></div>
+      </div>
+    </section>
+
+    <!-- Настройки -->
+    <section id="vSettings" hidden>
+      <div class="page-head"><div><h1>Настройки</h1><p class="sub">Подключение к Gemini и данные в этом браузере.</p></div></div>
+      <div class="settings-grid">
+        <div class="card">
+          <div class="card-head"><h2>Подключение к Gemini</h2></div>
+          <div id="settingsConn"></div>
+          <p>Ключ и модель задаются в файле <code>.env</code> в папке проекта. Перезапускать сервер после изменения не нужно.</p>
+          <pre class="code">GEMINI_API_KEY=ваш_ключ
+GEMINI_MODEL=gemini-3.5-flash</pre>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Данные</h2></div>
+          <div id="settingsData"></div>
+          <div class="row"><button class="btn-ghost danger" id="clearArchive2"><svg class="i"><use href="#i-trash"/></svg>Очистить архив</button></div>
+          <p>Используйте только обезличенные данные: без имён, телефонов и адресов клиентов. Бесплатный тариф Gemini может использовать запросы для улучшения моделей Google.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  const WHO = { "клиент": "Клиент", "компания": "Компания", "обе стороны": "Обе стороны" };
+  const LEVEL = { high: "Высокий", medium: "Средний", low: "Низкий" };
+  const LEVEL_ORDER = { high: 0, medium: 1, low: 2 };
+  const LEVEL_DOTS = { high: 5, medium: 3, low: 1 };
+  const LEVEL_COLOR = { high: "var(--high)", medium: "var(--med)", low: "var(--low)" };
+  const EXAMPLES = { 1: "Пример 1 · Успешный", 2: "Пример 2 · Размытый", 3: "Пример 3 · Длинный" };
+  const AUDIO_EXT = ["mp3", "wav", "m4a", "ogg"];
+  const MAX_AUDIO = 200 * 1024 * 1024;
+  const MAX_STORED_AUDIO = 100 * 1024 * 1024;
+  const MAX_DECODE = 40 * 1024 * 1024;
+  const ARCHIVE_KEY = "callbrief.archive.v1";
+  const ARCHIVE_LIMIT = 50;
+  const WAVE_BARS = 150;
+  const SPEEDS = [0.8, 1, 1.2, 1.5, 2];
+
+  // ---------- helpers ----------
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function icon(name, cls) {
+    const s = document.createElementNS(SVG_NS, "svg");
+    s.setAttribute("class", "i" + (cls ? " " + cls : ""));
+    const u = document.createElementNS(SVG_NS, "use");
+    u.setAttribute("href", "#i-" + name);
+    s.append(u);
+    return s;
+  }
+  function withIcon(tag, cls, ic, text) {
+    const n = el(tag, cls);
+    n.append(icon(ic), document.createTextNode(text));
+    return n;
+  }
+  const pad = (n) => String(n).padStart(2, "0");
+  function fmtTime(sec) {
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    sec = Math.floor(sec);
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return h ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  }
+  const fmtDate = (ts) => new Date(ts).toLocaleString("ru-RU", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const fmtSize = (b) => b >= 1048576 ? (b / 1048576).toFixed(1) + " МБ" : Math.max(1, Math.round(b / 1024)) + " КБ";
+  const normalize = (t) => String(t || "").toLowerCase().replace(/ё/g, "е").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  function plural(n, forms) {
+    const a = Math.abs(n) % 100, b = a % 10;
+    if (a > 10 && a < 20) return forms[2];
+    if (b > 1 && b < 5) return forms[1];
+    if (b === 1) return forms[0];
+    return forms[2];
+  }
+  function stamp(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  }
+  function fakePeaks(n, seed) {
+    let x = seed;
+    return Array.from({ length: n }, (_, i) => {
+      x = (x * 9301 + 49297) % 233280;
+      return 0.18 + 0.82 * Math.abs(Math.sin(i * 0.37 + seed)) * (x / 233280);
+    });
+  }
+  const riskSort = (list) => [...list].sort((a, b) => (LEVEL_ORDER[a.level] ?? 3) - (LEVEL_ORDER[b.level] ?? 3));
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.hidden = false;
+    requestAnimationFrame(() => t.classList.add("show"));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      t.classList.remove("show");
+      setTimeout(() => { t.hidden = true; }, 260);
+    }, 2800);
+  }
+
+  async function api(url, options) {
+    let res;
+    try {
+      res = await fetch(url, options);
+    } catch {
+      throw Object.assign(new Error("Сервер недоступен. Проверьте, что приложение запущено (uvicorn)."), { code: "offline" });
+    }
+    let data = null;
+    try { data = await res.json(); } catch { /* не JSON */ }
+    if (!res.ok) {
+      throw Object.assign(new Error((data && data.message) || `Ошибка сервера (${res.status}).`), { code: data && data.error });
+    }
+    return data;
+  }
+
+  async function copyText(t) {
+    try {
+      await navigator.clipboard.writeText(t);
+      return true;
+    } catch {
+      const ta = el("textarea");
+      ta.value = t;
+      ta.style.cssText = "position:fixed;opacity:0";
+      document.body.append(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch { /* ignore */ }
+      ta.remove();
+      return ok;
+    }
+  }
+  function downloadFile(name, text, type) {
+    const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
+    const a = el("a");
+    a.href = url;
+    a.download = name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ---------- Архив (localStorage) и аудио (IndexedDB) ----------
+  function loadArchive() {
+    try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY)) || []; } catch { return []; }
+  }
+  function saveArchive(list) {
+    for (;;) {
+      try {
+        localStorage.setItem(ARCHIVE_KEY, JSON.stringify(list));
+        return true;
+      } catch {
+        if (list.length <= 1) { toast("Не удалось сохранить в архив: в браузере мало места"); return false; }
+        idbDel(list.pop().id);
+      }
+    }
+  }
+  const getEntry = (id) => loadArchive().find((e) => e.id === id);
+  function addEntry(entry) {
+    const list = [entry, ...loadArchive()];
+    list.splice(ARCHIVE_LIMIT).forEach((e) => idbDel(e.id));
+    saveArchive(list);
+    updateArchiveCount();
+  }
+  function deleteEntry(id) {
+    saveArchive(loadArchive().filter((e) => e.id !== id));
+    idbDel(id);
+    updateArchiveCount();
+  }
+  function clearArchive() {
+    if (!loadArchive().length) return;
+    if (!confirm("Удалить все анализы из архива? Это действие нельзя отменить.")) return;
+    try { localStorage.removeItem(ARCHIVE_KEY); } catch { /* ignore */ }
+    idbClear();
+    updateArchiveCount();
+    renderArchive();
+    renderSettings();
+    toast("Архив очищен");
+  }
+  function updateArchiveCount() {
+    const n = loadArchive().length;
+    $("#archiveCount").textContent = n ? String(n) : "";
+  }
+
+  let dbPromise = null;
+  function db() {
+    if (!dbPromise) {
+      dbPromise = new Promise((resolve, reject) => {
+        if (!("indexedDB" in window)) return reject(new Error("IndexedDB недоступен"));
+        const r = indexedDB.open("callbrief", 1);
+        r.onupgradeneeded = () => r.result.createObjectStore("audio");
+        r.onsuccess = () => resolve(r.result);
+        r.onerror = () => reject(r.error);
+      });
+    }
+    return dbPromise;
+  }
+  async function idbTx(mode, fn) {
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const tx = d.transaction("audio", mode);
+      const req = fn(tx.objectStore("audio"));
+      tx.oncomplete = () => resolve(req ? req.result : undefined);
+      tx.onerror = tx.onabort = () => reject(tx.error);
+    });
+  }
+  const idbPut = (id, blob) => idbTx("readwrite", (s) => s.put(blob, id)).then(() => true, () => false);
+  const idbGet = (id) => idbTx("readonly", (s) => s.get(id)).catch(() => null);
+  const idbDel = (id) => idbTx("readwrite", (s) => s.delete(id)).catch(() => {});
+  const idbClear = () => idbTx("readwrite", (s) => s.clear()).catch(() => {});
+
+  // ---------- Статус сервера ----------
+  let health = null;
+  async function loadHealth() {
+    try { health = await api("/api/health"); } catch { health = null; }
+    const pill = $("#statusPill");
+    pill.classList.remove("ok", "warn", "err");
+    if (!health) { pill.classList.add("err"); $("#statusText").textContent = "Сервер недоступен"; }
+    else if (!health.has_key) { pill.classList.add("warn"); $("#statusText").textContent = "Нет ключа Gemini"; }
+    else { pill.classList.add("ok"); $("#statusText").textContent = `Gemini · ${health.model}`; }
+    $("#keyAlert").hidden = !health || health.has_key;
+    renderSettings();
+  }
+
+  // ---------- Роутер ----------
+  const views = { new: $("#vNew"), result: $("#vResult"), archive: $("#vArchive"), settings: $("#vSettings") };
+  function route() {
+    closeMenus();
+    const h = location.hash;
+    if (!h.startsWith("#/") || h === "#/") {
+      stopAudio();
+      $("#app").hidden = true;
+      $("#landing").hidden = false;
+      document.title = "CallBrief — ИИ-анализ разговоров с клиентами";
+      requestAnimationFrame(layoutHero);
+      return;
+    }
+    closeModal();
+    $("#landing").hidden = true;
+    $("#app").hidden = false;
+    const [, name, id] = h.split("/");
+    let key = "new";
+    if (name === "analysis" && id) key = "result";
+    else if (name === "archive") key = "archive";
+    else if (name === "settings") key = "settings";
+    Object.entries(views).forEach(([k, v]) => { v.hidden = k !== key; });
+    const nav = key === "result" || key === "new" ? "analyses" : key;
+    $$(".side-nav a").forEach((a) => a.classList.toggle("active", a.dataset.nav === nav));
+    $("#backLink").hidden = key !== "result";
+    if (key !== "result") stopAudio();
+    const titles = { new: "Новый анализ", result: "Анализ", archive: "Архив", settings: "Настройки" };
+    document.title = `${titles[key]} — CallBrief`;
+    if (key === "result") openAnalysis(decodeURIComponent(id));
+    if (key === "archive") renderArchive();
+    if (key === "settings") renderSettings();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", route);
+
+  // ---------- Лендинг ----------
+  const modals = { features: $("#mFeatures"), how: $("#mHow") };
+  let modalOpener = null;
+  function openModal(name, opener) {
+    closeModal();
+    modals[name].hidden = false;
+    modalOpener = opener;
+    opener.setAttribute("aria-expanded", "true");
+    $(".modal-close", modals[name]).focus();
+  }
+  function closeModal() {
+    Object.values(modals).forEach((m) => { m.hidden = true; });
+    $$("[data-modal]").forEach((b) => b.setAttribute("aria-expanded", "false"));
+    if (modalOpener && !$("#landing").hidden) modalOpener.focus();
+    modalOpener = null;
+  }
+  $$("[data-modal]").forEach((b) => b.addEventListener("click", () => openModal(b.dataset.modal, b)));
+  Object.values(modals).forEach((m) => m.addEventListener("click", (e) => {
+    if (e.target === m || e.target.closest("[data-close]")) closeModal();
+  }));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
+  // Сцена первого экрана: масштаб под свободное место, луч над карточкой загрузки, волна на canvas
+  const heroNoise = (() => { let x = 7; return Array.from({ length: 512 }, () => { x = (x * 9301 + 49297) % 233280; return x / 233280; }); })();
+  function layoutHero() {
+    const visual = $("#heroVisual"), stage = $("#hvStage");
+    if ($("#landing").hidden || !visual.clientWidth || !visual.clientHeight) return;
+    const s = Math.min(visual.clientWidth / stage.offsetWidth, visual.clientHeight / stage.offsetHeight, 1.15);
+    stage.style.setProperty("--s", s.toFixed(3));
+    const cards = $("#hvCards"), up = $("#heroUpload"), beam = $("#heroBeam"), hit = $("#heroHit");
+    const cx = cards.offsetLeft + up.offsetLeft + up.offsetWidth / 2;
+    beam.style.left = `${cx - 1}px`;
+    beam.style.height = `${cards.offsetTop - beam.offsetTop}px`;
+    hit.style.left = `${cx - 75}px`;
+    hit.style.top = `${cards.offsetTop - 14}px`;
+    drawHeroWave(cx, s);
+  }
+  function roundBar(ctx, x, y, w, h) {
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, w / 2); else ctx.rect(x, y, w, h);
+    ctx.fill();
+  }
+  function drawHeroWave(peakX, scale) {
+    const c = $("#heroWave");
+    const w = c.offsetWidth, h = c.offsetHeight;
+    const ratio = Math.min(3, (window.devicePixelRatio || 1) * scale);
+    c.width = Math.round(w * ratio);
+    c.height = Math.round(h * ratio);
+    const ctx = c.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const mid = h / 2, px = peakX - c.offsetLeft;
+    // тонкая центральная линия
+    const line = ctx.createLinearGradient(0, 0, w, 0);
+    line.addColorStop(0, "rgba(200,215,245,0)");
+    line.addColorStop(0.3, "rgba(200,215,245,.2)");
+    line.addColorStop(1, "rgba(200,215,245,.1)");
+    ctx.fillStyle = line;
+    ctx.fillRect(0, mid - 0.5, w, 1);
+    // зеркальные столбики «речи»: выше и ярче у луча, затухают к краям
+    const step = 5.4;
+    for (let x = step, i = 0; x < w - 2; x += step, i++) {
+      const d = (x - px) / w;
+      const near = Math.exp(-(d * d) / 0.03);
+      const r1 = heroNoise[i % heroNoise.length], r2 = heroNoise[(i * 7 + 3) % heroNoise.length];
+      const syllable = 0.4 + 0.6 * Math.abs(Math.sin(i * 0.21) * Math.sin(i * 0.067 + 1.3));
+      let amp = (0.1 + 0.9 * r1 * syllable) * (0.4 + 0.6 * near);
+      if (r2 < 0.12) amp *= 0.2;
+      const edge = Math.max(0, Math.min(1, x / (w * 0.22), (w - x) / (w * 0.05)));
+      const alpha = edge * (0.25 + 0.65 * near + 0.1 * r2);
+      const bh = Math.max(2, amp * h * 0.9);
+      ctx.fillStyle = `rgba(215,228,255,${alpha.toFixed(3)})`;
+      roundBar(ctx, x - 0.7, mid - bh / 2, 1.4, bh);
+    }
+    // яркий пик в точке луча
+    ctx.save();
+    ctx.shadowColor = "rgba(120,175,255,.95)";
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = "#fff";
+    roundBar(ctx, px - 1, 2, 2, h - 4);
+    ctx.restore();
+  }
+  window.addEventListener("resize", () => requestAnimationFrame(layoutHero));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestAnimationFrame(layoutHero));
+
+  function bindDrop(label, input) {
+    input.addEventListener("change", () => { if (input.files[0]) setAudio(input.files[0]); input.value = ""; });
+    ["dragenter", "dragover"].forEach((ev) => label.addEventListener(ev, (e) => { e.preventDefault(); label.classList.add("over"); }));
+    ["dragleave", "drop"].forEach((ev) => label.addEventListener(ev, (e) => { e.preventDefault(); label.classList.remove("over"); }));
+    label.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) setAudio(f); });
+  }
+  bindDrop($("#heroDrop"), $("#heroFile"));
+  bindDrop($("#appDrop"), $("#appFile"));
+
+  $("#heroRecognize").addEventListener("click", () => {
+    if (!draft.audio) { $("#heroFile").click(); return; }
+    location.hash = "#/app";
+    transcribe();
+  });
+
+  // ---------- Новый анализ ----------
+  const draft = { audio: null, source: "text", title: null, audioForText: null };
+  const ta = $("#transcript");
+  let busy = false, busyTimer = null;
+
+  function updateCount() { $("#charCount").textContent = `${ta.value.length.toLocaleString("ru-RU")} символов`; }
+  function showNewError(err) {
+    const box = $("#newError");
+    box.textContent = err.message || String(err);
+    box.hidden = false;
+    if (err.code === "no_key") $("#keyAlert").hidden = false;
+    if (!$("#app").hidden) box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  function clearNewMsgs() { $("#newError").hidden = true; $("#newNotice").hidden = true; }
+  function notice(msg) { const n = $("#newNotice"); n.textContent = msg; n.hidden = false; }
+
+  function validateAudio(file) {
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!AUDIO_EXT.includes(ext)) return "Поддерживаются только файлы mp3, wav, m4a и ogg.";
+    if (!file.size) return "Файл пустой.";
+    if (file.size > MAX_AUDIO) return "Файл больше 200 МБ. Сожмите запись или разделите её на части.";
+    return null;
+  }
+  function setAudio(file) {
+    const err = validateAudio(file);
+    if (err) { toast(err); showNewError(new Error(err)); return; }
+    clearNewMsgs();
+    draft.audio = file;
+    renderAudioDraft();
+  }
+  function renderAudioDraft() {
+    const f = draft.audio;
+    $("#fileRow").hidden = !f;
+    $("#appDrop").hidden = !!f;
+    if (f) {
+      $("#fileName").textContent = f.name;
+      $("#fileSize").textContent = fmtSize(f.size) + (f.size > 20 * 1024 * 1024 ? " · загрузится через Files API" : "");
+    }
+    $("#recognizeBtn").disabled = !f || busy;
+    $("#heroFileName").textContent = f ? `${f.name} · ${fmtSize(f.size)}` : "или нажмите, чтобы выбрать";
+    $("#heroDrop").classList.toggle("has-file", !!f);
+  }
+  $("#fileClear").addEventListener("click", () => { draft.audio = null; renderAudioDraft(); });
+
+  function setBusy(on, title, sub) {
+    busy = on;
+    $$("#vNew button").forEach((b) => { b.disabled = on; });
+    $("#recognizeBtn").disabled = on || !draft.audio;
+    $("#heroRecognize").disabled = on;
+    ta.readOnly = on;
+    const p = $("#progress");
+    p.hidden = !on;
+    clearInterval(busyTimer);
+    if (on) {
+      $("#progressTitle").textContent = title;
+      $("#progressSub").textContent = sub;
+      const t0 = Date.now();
+      const tick = () => { $("#progressTime").textContent = `${Math.round((Date.now() - t0) / 1000)} с`; };
+      tick();
+      busyTimer = setInterval(tick, 1000);
+    }
+  }
+
+  async function transcribe() {
+    if (!draft.audio || busy) return;
+    clearNewMsgs();
+    const file = draft.audio;
+    setBusy(true, "Расшифровываю запись…", file.size > 20 * 1024 * 1024
+      ? "Большой файл: загружаю через Files API Gemini"
+      : "Gemini дословно переводит речь в текст с метками времени");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const data = await api("/api/transcribe", { method: "POST", body: form });
+      ta.value = data.text;
+      updateCount();
+      draft.source = "audio";
+      draft.title = file.name;
+      draft.audioForText = file;
+      notice("Расшифровка готова. Проверьте текст и нажмите «Проанализировать».");
+      ta.scrollTop = 0;
+    } catch (err) {
+      showNewError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+  $("#recognizeBtn").addEventListener("click", transcribe);
+
+  function getDuration(file) {
+    return new Promise((resolve) => {
+      const a = new Audio();
+      const url = URL.createObjectURL(file);
+      const done = (v) => { URL.revokeObjectURL(url); resolve(v); };
+      const timer = setTimeout(() => done(null), 6000);
+      a.onloadedmetadata = () => { clearTimeout(timer); done(isFinite(a.duration) ? a.duration : null); };
+      a.onerror = () => { clearTimeout(timer); done(null); };
+      a.preload = "metadata";
+      a.src = url;
+    });
+  }
+
+  async function analyze() {
+    if (busy) return;
+    clearNewMsgs();
+    const text = ta.value.trim();
+    if (!text) { showNewError(new Error("Вставьте текст разговора, выберите пример или расшифруйте аудиозапись.")); return; }
+    setBusy(true, "Анализирую разговор…", "Извлекаю договорённости, шаги, риски и рекомендации, сверяю цитаты");
+    try {
+      const result = await api("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const audioFile = draft.source === "audio" ? draft.audioForText : null;
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const entry = {
+        id,
+        createdAt: Date.now(),
+        source: audioFile ? "audio" : draft.source,
+        title: audioFile ? audioFile.name : draft.source === "example" ? draft.title : "Текстовый транскрипт",
+        duration: audioFile ? await getDuration(audioFile) : null,
+        transcript: text,
+        result,
+        audioStored: false,
+      };
+      if (audioFile && audioFile.size <= MAX_STORED_AUDIO) entry.audioStored = await idbPut(id, audioFile);
+      addEntry(entry);
+      location.hash = `#/analysis/${id}`;
+    } catch (err) {
+      showNewError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+  $("#analyzeBtn").addEventListener("click", analyze);
+  ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); analyze(); } });
+  ta.addEventListener("input", () => {
+    updateCount();
+    if (!ta.value.trim()) { draft.source = "text"; draft.title = null; draft.audioForText = null; }
+  });
+
+  $$("[data-example]").forEach((b) => b.addEventListener("click", async () => {
+    clearNewMsgs();
+    try {
+      const data = await api(`/api/examples/${b.dataset.example}`);
+      ta.value = data.text;
+      updateCount();
+      ta.scrollTop = 0;
+      draft.source = "example";
+      draft.title = EXAMPLES[b.dataset.example];
+      draft.audioForText = null;
+    } catch (err) { showNewError(err); }
+  }));
+
+  // ---------- Разбор транскрипта ----------
+  const LINE_RE = /^\s*(?:\[?(\d{1,2}:\d{2}(?::\d{2})?)\]?\s*[-–—]?\s*)?(менеджер|клиент)\s*:\s*(.*)$/i;
+  const toSec = (t) => t.split(":").reduce((a, b) => a * 60 + Number(b), 0);
+  function parseTranscript(text) {
+    const lines = [];
+    for (const raw of String(text || "").split(/\r?\n/)) {
+      const s = raw.trim();
+      if (!s) continue;
+      const m = s.match(LINE_RE);
+      if (m) {
+        lines.push({ time: m[1] ? toSec(m[1]) : null, timeLabel: m[1] || null,
+          speaker: m[2].toLowerCase() === "менеджер" ? "manager" : "client", text: m[3] });
+      } else if (lines.length) {
+        lines[lines.length - 1].text += " " + s;
+      } else {
+        lines.push({ time: null, timeLabel: null, speaker: null, text: s });
+      }
+    }
+    lines.forEach((l) => { l.norm = normalize(l.text); });
+    return lines;
+  }
+  function findLineIndex(quote) {
+    const q = normalize(quote);
+    if (!q || !current) return -1;
+    const lines = current.lines;
+    const exact = lines.findIndex((l) => ` ${l.norm} `.includes(` ${q} `));
+    if (exact >= 0) return exact;
+    const qw = [...new Set(q.split(" "))];
+    let best = -1, bestScore = 0;
+    lines.forEach((l, i) => {
+      const words = new Set(l.norm.split(" "));
+      const score = qw.filter((w) => words.has(w)).length / qw.length;
+      if (score > bestScore) { bestScore = score; best = i; }
+    });
+    return bestScore >= 0.6 ? best : -1;
+  }
+
+  // ---------- Результат ----------
+  let current = null;
+  let activeTab = "transcript";
+
+  function openAnalysis(id) {
+    const entry = getEntry(id);
+    if (!entry) {
+      toast("Анализ не найден в архиве");
+      location.replace("#/archive");
+      return;
+    }
+    const r = entry.result;
+    r.recommendations = r.recommendations || [];
+    current = { ...entry, lines: parseTranscript(entry.transcript) };
+    renderResult();
+    setupPlayer(current);
+  }
+
+  function verifyTag(v) {
+    const t = withIcon("span", "tag " + (v ? "ok" : "miss"), v ? "check" : "help", v ? "Подтверждено" : "Цитата не найдена");
+    t.title = v ? "Цитата найдена в тексте разговора" : "Цитата не найдена в тексте — перепроверьте пункт вручную";
+    return t;
+  }
+
+  function renderResult() {
+    const e = current, r = e.result, v = r.verification;
+    $("#rTitle").textContent = e.source === "audio" ? "Анализ звонка" : "Анализ разговора";
+    const meta = $("#rMeta");
+    meta.replaceChildren();
+    const add = (node) => { if (meta.childNodes.length) meta.append(el("i", "sep")); meta.append(node); };
+    add(withIcon("span", "", "calendar", fmtDate(e.createdAt)));
+    if (e.duration) add(withIcon("span", "", "clock", `Длительность: ${fmtTime(e.duration)}`));
+    add(withIcon("span", "", e.source === "audio" ? "wave" : "text", e.title));
+    add(withIcon("span", v.confirmed === v.total ? "ok-text" : "miss-text", "shield", `Подтверждено ${v.confirmed} из ${v.total}`));
+
+    const setCount = (tab, n) => { $(`.tab[data-tab="${tab}"] .tab-count`).textContent = n; };
+    setCount("analysis", r.risks.length + r.open_questions.length);
+    setCount("recs", r.recommendations.length);
+    setCount("agreements", r.agreements.length + r.next_steps.length);
+    renderSide();
+    activateTab("transcript");
+  }
+
+  function activateTab(name) {
+    activeTab = name;
+    $$(".tab").forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle("active", on);
+      t.setAttribute("aria-selected", String(on));
+    });
+    renderTab();
+  }
+  $$(".tab").forEach((t) => t.addEventListener("click", () => activateTab(t.dataset.tab)));
+
+  function tag(text, ic, cls) { return withIcon("span", "tag" + (cls ? " " + cls : ""), ic, text); }
+
+  function item(title, tags, data, cls) {
+    const box = el("div", "item" + (cls ? " " + cls : ""));
+    box.append(el("div", "item-title", title));
+    const meta = el("div", "item-meta");
+    tags.forEach((t) => meta.append(t));
+    meta.append(verifyTag(data.verified));
+    box.append(meta);
+    if (data.quote) {
+      box.append(el("div", "quote", `«${data.quote}»`));
+      const idx = findLineIndex(data.quote);
+      if (idx >= 0) {
+        const b = withIcon("button", "link-btn", "quote", "Показать в расшифровке");
+        b.addEventListener("click", () => goToLine(idx));
+        box.append(b);
+      }
+    }
+    return box;
+  }
+  function section(body, title, list, emptyText, build) {
+    body.append(el("div", "sec-title", title));
+    if (!list.length) { body.append(el("p", "sub", emptyText)); return; }
+    const box = el("div", "items");
+    list.forEach((x) => box.append(build(x)));
+    body.append(box);
+  }
+
+  function renderTab() {
+    const body = $("#tabBody");
+    body.replaceChildren();
+    body.scrollTop = 0;
+    const r = current.result;
+    if (activeTab === "transcript") return renderTranscript(body);
+    if (activeTab === "analysis") {
+      body.append(el("div", "sec-title", "Резюме"), el("p", "summary-text", r.summary || "—"));
+      section(body, "Риски", riskSort(r.risks), "Рисков не выявлено.",
+        (x) => item(x.text, [tag(LEVEL[x.level] || x.level, "alert", "lvl-" + x.level)], x, "risk-" + x.level));
+      body.append(el("div", "sec-title", "Открытые вопросы"));
+      if (r.open_questions.length) {
+        const ul = el("ul", "bullets");
+        r.open_questions.forEach((q) => ul.append(el("li", null, q)));
+        body.append(ul);
+      } else body.append(el("p", "sub", "Открытых вопросов нет."));
+    }
+    if (activeTab === "recs") {
+      section(body, "Рекомендации", r.recommendations, "Рекомендаций для этого разговора нет.",
+        (x) => item(x.text, [tag("Рекомендация ИИ", "sparkle", "ai")], x));
+    }
+    if (activeTab === "agreements") {
+      section(body, "Договорённости", r.agreements, "Явных договорённостей в разговоре нет.",
+        (x) => item(x.text, [tag(WHO[x.who] || x.who, "users")], x));
+      section(body, "Следующие шаги", r.next_steps, "Следующий шаг не согласован.",
+        (x) => item(x.action, [tag(x.owner || "Не указан", "user"), tag(x.deadline || "Срок не назван", "calendar", x.deadline ? "" : "muted")], x));
+    }
+  }
+
+  function renderTranscript(body) {
+    const lines = current.lines;
+    if (!lines.length) { body.append(el("div", "empty-state", "Текст разговора пуст.")); return; }
+    const hasAudio = !$("#player").hidden;
+    lines.forEach((l, i) => {
+      const row = el("div", "tline" + (l.speaker ? " " + l.speaker : ""));
+      row.dataset.index = i;
+      let t;
+      if (l.timeLabel && hasAudio) {
+        t = el("button", "t", l.timeLabel);
+        t.title = "Воспроизвести с этого места";
+        t.addEventListener("click", () => { audio.currentTime = l.time; audio.play(); });
+      } else {
+        t = el("span", "t", l.timeLabel || pad(i + 1));
+      }
+      const content = el("div");
+      content.append(el("div", "who", l.speaker === "manager" ? "Менеджер" : l.speaker === "client" ? "Клиент" : "Текст"), el("div", "txt", l.text));
+      row.append(t, el("span", "dot"), content);
+      body.append(row);
+    });
+    lastPlayingIdx = -1;
+    highlightLine(audio.currentTime || 0);
+  }
+
+  function goToLine(idx) {
+    activateTab("transcript");
+    requestAnimationFrame(() => {
+      const row = $(`#tabBody [data-index="${idx}"]`);
+      if (!row) return;
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      row.classList.add("flash");
+      setTimeout(() => row.classList.remove("flash"), 2200);
+      const l = current.lines[idx];
+      if (l.time != null && !$("#player").hidden) audio.currentTime = l.time;
+    });
+  }
+
+  function meter(on, color) {
+    const m = el("span", "meter");
+    m.style.setProperty("--c", color);
+    for (let i = 0; i < 5; i++) m.append(el("i", i < on ? "on" : ""));
+    return m;
+  }
+
+  function renderSide() {
+    const r = current.result, v = r.verification;
+    const info = $("#keyInfo");
+    info.replaceChildren();
+    const kv = (ic, label, parts) => {
+      const row = el("div", "kv");
+      const ico = el("div", "kv-ico");
+      ico.append(icon(ic));
+      const b = el("div");
+      const val = el("div", "kv-value");
+      parts.forEach((p) => val.append(typeof p === "string" ? document.createTextNode(p) : p));
+      b.append(el("div", "kv-label", label), val);
+      row.append(ico, b);
+      info.append(row);
+    };
+    kv("shield", "Достоверность", v.total
+      ? [meter(Math.round((v.confirmed / v.total) * 5), "var(--ok)"), `${v.confirmed} из ${v.total} цитат подтверждено`]
+      : ["Нет пунктов с цитатами"]);
+    const risks = riskSort(r.risks);
+    kv("alert", "Уровень риска", risks.length
+      ? [meter(LEVEL_DOTS[risks[0].level] || 0, LEVEL_COLOR[risks[0].level]), `${LEVEL[risks[0].level] || ""} · ${risks.length} ${plural(risks.length, ["риск", "риска", "рисков"])}`]
+      : [meter(0), "Рисков не выявлено"]);
+    const steps = r.next_steps;
+    kv("steps", "Следующий шаг", steps.length
+      ? [`Согласован · ${steps.length} ${plural(steps.length, ["шаг", "шага", "шагов"])}`]
+      : ["Не согласован"]);
+    const na = r.agreements.length;
+    kv("check-c", "Договорённости", [na ? `${na} ${plural(na, ["договорённость", "договорённости", "договорённостей"])}` : "Явных договорённостей нет"]);
+    const nq = r.open_questions.length;
+    kv("help", "Открытые вопросы", [nq ? `${nq} ${plural(nq, ["вопрос", "вопроса", "вопросов"])} без ответа` : "Нет"]);
+
+    // Что важно для руководителя: риски (сначала высокие) и открытые вопросы
+    const imp = $("#rImportant");
+    imp.replaceChildren();
+    const points = [
+      ...risks.filter((x) => x.level !== "low").slice(0, 3).map((x) => x.text),
+      ...r.open_questions.slice(0, 3),
+    ];
+    if (!points.length) points.push(r.summary || "Критичных моментов не выявлено.");
+    points.forEach((p) => imp.append(el("li", null, p)));
+
+    // Дальнейшие договорённости: ближайший шаг со сроком
+    const nx = $("#rNext");
+    nx.replaceChildren();
+    const step = steps.find((s) => s.deadline) || steps[0];
+    if (step) {
+      nx.append(el("p", "next-action", step.action), el("div", "next-owner", `Ответственный: ${step.owner || "не указан"}`));
+      const row = el("div", "next-row");
+      if (step.deadline) row.append(withIcon("span", "pill-status", "check-c", "Запланировано"), el("span", "deadline", step.deadline));
+      else row.append(withIcon("span", "pill-status muted", "calendar", "Срок не назван"));
+      nx.append(row);
+      if (steps.length > 1) {
+        const more = el("button", "link-btn", `Все шаги (${steps.length}) →`);
+        more.style.marginTop = "14px";
+        more.addEventListener("click", () => activateTab("agreements"));
+        nx.append(more);
+      }
+    } else {
+      nx.append(el("p", "next-action", "Следующий шаг в разговоре не согласован."));
+      nx.append(withIcon("span", "pill-status warn", "alert", "Требует внимания"));
+    }
+  }
+
+  // ---------- Отчёт ----------
+  function vmark(x) { return x.verified ? " ✅" : " ❓ _(цитата не найдена)_"; }
+  function toMarkdown(e) {
+    const d = e.result, v = d.verification, L = [];
+    L.push(`# CallBrief — ${e.source === "audio" ? "анализ звонка" : "анализ разговора"}`, "");
+    L.push(`- **Источник:** ${e.title}`, `- **Дата анализа:** ${fmtDate(e.createdAt)}`);
+    if (e.duration) L.push(`- **Длительность:** ${fmtTime(e.duration)}`);
+    L.push(`- **Подтверждено цитатами:** ${v.confirmed} из ${v.total}`, "", "## Резюме", "", d.summary || "—", "");
+    L.push("## Договорённости", "");
+    if (!d.agreements.length) L.push("Явных договорённостей нет.");
+    d.agreements.forEach((a) => L.push(`- **${a.text}** (${WHO[a.who] || a.who})${vmark(a)}`, `  > «${a.quote}»`));
+    L.push("", "## Следующие шаги", "");
+    if (!d.next_steps.length) L.push("Следующий шаг не согласован.");
+    d.next_steps.forEach((s) => L.push(`- **${s.action}** — ответственный: ${s.owner || "не указан"}; срок: ${s.deadline || "не назван"}${vmark(s)}`, `  > «${s.quote}»`));
+    L.push("", "## Риски", "");
+    if (!d.risks.length) L.push("Рисков не выявлено.");
+    riskSort(d.risks).forEach((r) => L.push(`- **[${LEVEL[r.level] || r.level}]** ${r.text}${vmark(r)}`, `  > «${r.quote}»`));
+    L.push("", "## Рекомендации", "");
+    if (!(d.recommendations || []).length) L.push("Рекомендаций нет.");
+    (d.recommendations || []).forEach((r) => L.push(`- ${r.text}${vmark(r)}`, `  > «${r.quote}»`));
+    L.push("", "## Открытые вопросы", "");
+    if (!d.open_questions.length) L.push("Открытых вопросов нет.");
+    d.open_questions.forEach((q) => L.push(`- ${q}`));
+    L.push("", "---", "_Сформировано CallBrief. Используйте только обезличенные данные._", "");
+    return L.join("\n");
+  }
+
+  $("#dlReport").addEventListener("click", () => {
+    downloadFile(`callbrief-report-${stamp(current.createdAt)}.md`, toMarkdown(current), "text/markdown");
+    toast("Отчёт скачан");
+  });
+  $("#dlTxt").addEventListener("click", () => downloadFile(`callbrief-transcript-${stamp(current.createdAt)}.txt`, current.transcript, "text/plain"));
+  $("#shareBtn").addEventListener("click", async () => {
+    const md = toMarkdown(current);
+    if (navigator.share) {
+      try { await navigator.share({ title: "CallBrief — отчёт по разговору", text: md }); return; }
+      catch (e) { if (e && e.name === "AbortError") return; }
+    }
+    toast(await copyText(md) ? "Отчёт скопирован — вставьте его в мессенджер или письмо" : "Не удалось скопировать отчёт");
+  });
+
+  function closeMenus() { $("#moreMenu").hidden = true; $("#speedMenu").hidden = true; }
+  $("#moreBtn").addEventListener("click", (e) => { e.stopPropagation(); const m = $("#moreMenu"); const open = m.hidden; closeMenus(); m.hidden = !open; });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".menu-wrap")) closeMenus(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
+  $("#moreMenu").addEventListener("click", async (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    closeMenus();
+    const act = b.dataset.act;
+    if (act === "copy") toast(await copyText(toMarkdown(current)) ? "Отчёт скопирован в буфер обмена" : "Не удалось скопировать");
+    if (act === "txt") $("#dlTxt").click();
+    if (act === "new") location.hash = "#/app";
+    if (act === "delete" && confirm("Удалить этот анализ из архива? Это действие нельзя отменить.")) {
+      deleteEntry(current.id);
+      toast("Анализ удалён");
+      location.hash = "#/archive";
+    }
+  });
+
+  // ---------- Плеер ----------
+  const audio = $("#audio");
+  let audioUrl = null, seeking = false, lastPlayingIdx = -1;
+
+  function stopAudio() { if (!audio.paused) audio.pause(); }
+  async function setupPlayer(entry) {
+    stopAudio();
+    if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; }
+    audio.removeAttribute("src");
+    $("#player").hidden = true;
+    $("#noAudio").hidden = true;
+    if (entry.source !== "audio") return;
+    const blob = entry.audioStored ? await idbGet(entry.id) : null;
+    if (!current || current.id !== entry.id) return;
+    if (!blob) { $("#noAudio").hidden = false; return; }
+    audioUrl = URL.createObjectURL(blob);
+    audio.src = audioUrl;
+    audio.playbackRate = 1;
+    $("#speedBtn").textContent = "1.0x";
+    $("#tDur").textContent = fmtTime(entry.duration || 0);
+    $("#player").hidden = false;
+    renderBars(fakePeaks(WAVE_BARS, 11), true);
+    if (activeTab === "transcript") renderTab();
+    const peaks = blob.size <= MAX_DECODE ? await computePeaks(blob, WAVE_BARS) : null;
+    if (peaks && current && current.id === entry.id) renderBars(peaks, false);
+  }
+
+  async function computePeaks(blob, n) {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new Ctx();
+      const buf = await ctx.decodeAudioData(await blob.arrayBuffer());
+      ctx.close();
+      const data = buf.getChannelData(0);
+      const step = Math.max(1, Math.floor(data.length / n));
+      const peaks = [];
+      for (let i = 0; i < n; i++) {
+        let max = 0;
+        for (let j = i * step, end = Math.min(data.length, (i + 1) * step); j < end; j += 8) {
+          const val = Math.abs(data[j]);
+          if (val > max) max = val;
+        }
+        peaks.push(max);
+      }
+      const top = Math.max(...peaks) || 1;
+      return peaks.map((p) => p / top);
+    } catch {
+      return null;
+    }
+  }
+
+  function renderBars(peaks, placeholder) {
+    const box = $("#waveBars");
+    box.replaceChildren();
+    box.classList.toggle("placeholder", placeholder);
+    peaks.forEach((p) => { const s = el("span"); s.style.height = Math.max(6, Math.round(p * 100)) + "%"; box.append(s); });
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const d = audio.duration, t = audio.currentTime || 0;
+    const known = d && isFinite(d);
+    const p = known ? t / d : 0;
+    $("#tCur").textContent = fmtTime(t);
+    if (known) $("#tDur").textContent = fmtTime(d);
+    const seek = $("#seek");
+    if (!seeking) seek.value = Math.round(p * 1000);
+    seek.style.setProperty("--p", `${(seeking ? seek.value / 10 : p * 100)}%`);
+    $("#waveHead").style.left = `calc(${p * 100}% - 1px)`;
+    const bars = $("#waveBars").children;
+    const k = Math.round(p * bars.length);
+    for (let i = 0; i < bars.length; i++) bars[i].classList.toggle("played", i < k);
+    highlightLine(t);
+  }
+
+  function highlightLine(t) {
+    if (activeTab !== "transcript" || !current || $("#player").hidden) return;
+    let idx = -1;
+    current.lines.forEach((l, i) => { if (l.time != null && l.time <= t + 0.2) idx = i; });
+    if (idx === lastPlayingIdx) return;
+    const prev = $(`#tabBody [data-index="${lastPlayingIdx}"]`);
+    if (prev) prev.classList.remove("playing");
+    const row = $(`#tabBody [data-index="${idx}"]`);
+    if (row) {
+      row.classList.add("playing");
+      if (!audio.paused) {
+        const body = $("#tabBody"), top = row.offsetTop - body.offsetTop;
+        if (top < body.scrollTop || top > body.scrollTop + body.clientHeight - 60) body.scrollTo({ top: top - 40, behavior: "smooth" });
+      }
+    }
+    lastPlayingIdx = idx;
+  }
+
+  function setPlayIcon() {
+    $("#playBtn use").setAttribute("href", audio.paused ? "#i-play" : "#i-pause");
+    $("#playBtn").setAttribute("aria-label", audio.paused ? "Воспроизвести" : "Пауза");
+  }
+  $("#playBtn").addEventListener("click", () => { if (audio.paused) audio.play().catch(() => toast("Не удалось воспроизвести запись")); else audio.pause(); });
+  ["play", "pause", "ended"].forEach((ev) => audio.addEventListener(ev, setPlayIcon));
+  ["timeupdate", "loadedmetadata", "seeked", "durationchange"].forEach((ev) => audio.addEventListener(ev, updateProgress));
+
+  const seekEl = $("#seek");
+  seekEl.addEventListener("input", () => {
+    seeking = true;
+    seekEl.style.setProperty("--p", `${seekEl.value / 10}%`);
+    if (isFinite(audio.duration)) $("#tCur").textContent = fmtTime((seekEl.value / 1000) * audio.duration);
+  });
+  seekEl.addEventListener("change", () => {
+    if (isFinite(audio.duration)) audio.currentTime = (seekEl.value / 1000) * audio.duration;
+    seeking = false;
+  });
+  $("#wave").addEventListener("click", (e) => {
+    if (!isFinite(audio.duration)) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    audio.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * audio.duration;
+  });
+
+  // скорость
+  const speedMenu = $("#speedMenu");
+  SPEEDS.forEach((s) => {
+    const b = el("button", null, `${s.toFixed(1)}x`);
+    b.dataset.speed = s;
+    speedMenu.append(b);
+  });
+  $("#speedBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = speedMenu.hidden;
+    closeMenus();
+    $$("button", speedMenu).forEach((b) => b.classList.toggle("sel", Number(b.dataset.speed) === audio.playbackRate));
+    speedMenu.hidden = !open;
+  });
+  speedMenu.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    audio.playbackRate = Number(b.dataset.speed);
+    $("#speedBtn").textContent = `${Number(b.dataset.speed).toFixed(1)}x`;
+    closeMenus();
+  });
+
+  // громкость
+  const vol = $("#volume");
+  function syncVolume() {
+    const level = audio.muted ? 0 : Math.round(audio.volume * 100);
+    vol.value = level;
+    vol.style.setProperty("--p", `${level}%`);
+    $("#muteBtn use").setAttribute("href", level === 0 ? "#i-mute" : "#i-volume");
+    $("#muteBtn").setAttribute("aria-label", level === 0 ? "Включить звук" : "Выключить звук");
+  }
+  vol.addEventListener("input", () => {
+    audio.volume = vol.value / 100;
+    audio.muted = Number(vol.value) === 0;
+    syncVolume();
+  });
+  $("#muteBtn").addEventListener("click", () => {
+    if (audio.muted || audio.volume === 0) { audio.muted = false; if (audio.volume === 0) audio.volume = 0.8; }
+    else audio.muted = true;
+    syncVolume();
+  });
+  syncVolume();
+
+  // ---------- Архив ----------
+  $("#archiveSearch").addEventListener("input", renderArchive);
+  $("#clearArchive").addEventListener("click", clearArchive);
+  $("#clearArchive2").addEventListener("click", clearArchive);
+
+  function renderArchive() {
+    const all = loadArchive();
+    const q = normalize($("#archiveSearch").value);
+    const list = all.filter((e) => !q || normalize(`${e.title} ${e.result.summary} ${e.transcript.slice(0, 20000)}`).includes(q));
+    const box = $("#archiveList");
+    box.replaceChildren();
+    $("#clearArchive").disabled = !all.length;
+    if (!list.length) {
+      const empty = el("div", "empty-state");
+      if (q) empty.textContent = "Ничего не найдено.";
+      else {
+        empty.append(el("p", null, "Архив пока пуст — здесь появятся все ваши анализы."));
+        const a = el("a", "btn-pill sm", "Сделать первый анализ");
+        a.href = "#/app";
+        empty.append(a);
+      }
+      box.append(empty);
+      return;
+    }
+    list.forEach((e) => {
+      const r = e.result, v = r.verification;
+      const row = el("a", "arc-row");
+      row.href = `#/analysis/${e.id}`;
+      const ico = el("span", "hv-ico");
+      ico.append(icon(e.source === "audio" ? "wave" : "text"));
+      const main = el("div");
+      main.style.minWidth = "0";
+      const sub = [fmtDate(e.createdAt)];
+      if (e.duration) sub.push(fmtTime(e.duration));
+      sub.push(`подтверждено ${v.confirmed} из ${v.total}`);
+      main.append(el("div", "arc-title", e.title), el("div", "arc-sub", sub.join(" · ")), el("div", "arc-summary", r.summary));
+      const tags = el("div", "arc-tags");
+      tags.append(tag(`${r.agreements.length} дог.`, "check-c"), tag(`${r.next_steps.length} шаг.`, "steps"));
+      const top = riskSort(r.risks)[0];
+      tags.append(top ? tag(`риск: ${LEVEL[top.level].toLowerCase()}`, "alert", "lvl-" + top.level) : tag("без рисков", "alert", "muted"));
+      const del = el("button", "icon-btn");
+      del.title = "Удалить из архива";
+      del.setAttribute("aria-label", "Удалить из архива");
+      del.append(icon("trash"));
+      del.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (!confirm(`Удалить «${e.title}» из архива?`)) return;
+        deleteEntry(e.id);
+        renderArchive();
+        toast("Анализ удалён");
+      });
+      row.append(ico, main, tags, del);
+      box.append(row);
+    });
+  }
+
+  // ---------- Настройки ----------
+  function settingRow(box, ic, label, value) {
+    const row = el("div", "kv");
+    const i = el("div", "kv-ico");
+    i.append(icon(ic));
+    const b = el("div");
+    b.append(el("div", "kv-label", label), el("div", "kv-value", value));
+    row.append(i, b);
+    box.append(row);
+  }
+  function renderSettings() {
+    const c = $("#settingsConn");
+    c.replaceChildren();
+    settingRow(c, "key", "Ключ Gemini API", !health ? "Сервер недоступен" : health.has_key ? "Найден в .env" : "Не найден — добавьте GEMINI_API_KEY в .env");
+    settingRow(c, "cpu", "Модель", health ? health.model : "—");
+    const d = $("#settingsData");
+    d.replaceChildren();
+    const n = loadArchive().length;
+    settingRow(d, "db", "Анализов в архиве", `${n} из ${ARCHIVE_LIMIT} · хранятся только в этом браузере`);
+    settingRow(d, "wave", "Аудиозаписи", "Файлы до 100 МБ сохраняются в браузере, чтобы их можно было прослушать позже");
+    $("#clearArchive2").disabled = !n;
+  }
+
+  // ---------- Старт ----------
+  updateCount();
+  updateArchiveCount();
+  loadHealth();
+  route();
+})();
+</script>
+</body>
+</html>
